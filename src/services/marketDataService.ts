@@ -23,7 +23,7 @@ export const marketDataService = {
     intraday: mockIntraday,
     historical: mockHistorical,
     source: "mock",
-    fetchedAt: "2024-05-20 15:42 ET",
+    fetchedAt: "模拟盘 15:00 CST",
   }),
   getLatestQuotes: (snapshot?: MarketDataSnapshot) => snapshot?.quotes || mockQuotes,
   getIntradaySeries: (symbol: string, snapshot?: MarketDataSnapshot) => snapshot?.intraday[symbol] || mockIntraday[symbol] || [],

@@ -67,7 +67,7 @@ function App() {
   const [snapshot, setSnapshot] = useState(() => marketDataService.getSnapshot());
   const [page, setPage] = useState<Page>(initialPage);
   const [selectedSymbol, setSelectedSymbol] = useState("000001.SH");
-  const [range, setRange] = useState<RangeKey>("YTD");
+  const [range, setRange] = useState<RangeKey>("1D");
   const [showPrevClose, setShowPrevClose] = useState(true);
   const [visibleSymbols, setVisibleSymbols] = useState(() => new Set(comparisonSymbols));
   const [rankMode, setRankMode] = useState<"gain" | "loss">("gain");
@@ -335,7 +335,10 @@ function Overlay({ range, setRange, visibleSymbols, toggleVisible, snapshotSourc
   const data = useMemo(() => {
     const rows: Record<string, string | number>[] = [];
     comparisonSymbols.forEach((symbol) => {
-      smoothSeries(normalizeSeriesToBase100(marketDataService.getHistoricalSeries(symbol, range, activeSnapshot))).forEach((point, i) => {
+      const series = range === "1D"
+        ? marketDataService.getIntradaySeries(symbol, activeSnapshot)
+        : marketDataService.getHistoricalSeries(symbol, range, activeSnapshot);
+      smoothSeries(normalizeSeriesToBase100(series)).forEach((point, i) => {
         rows[i] = rows[i] || { time: point.time };
         rows[i][symbol] = point.value;
       });
@@ -351,10 +354,10 @@ function Overlay({ range, setRange, visibleSymbols, toggleVisible, snapshotSourc
       <div className="panel chart-panel">
         <div className="panel-head">
           <div>
-            <h2>全球主要指数叠加图</h2>
-            <p>将不同国家和地区的市场统一标准化，以比较相对表现。</p>
+            <h2>{range === "1D" ? "A 股指数分时叠加图" : "A 股主要指数叠加图"}</h2>
+            <p>{range === "1D" ? "按沪深 A 股交易时段展示：09:30–11:30，13:00–15:00。" : "将不同指数统一标准化，以比较相对表现。"}</p>
           </div>
-          <div className="tabs">{ranges.filter((item) => item !== "1D").map((item) => <button key={item} className={range === item ? "active" : ""} onClick={() => setRange(item)}>{item}</button>)}</div>
+          <div className="tabs">{ranges.map((item) => <button key={item} className={range === item ? "active" : ""} onClick={() => setRange(item)}>{item}</button>)}</div>
         </div>
         <div className="overlay-layout">
           <ResponsiveContainer width="100%" height={440}>
@@ -369,7 +372,9 @@ function Overlay({ range, setRange, visibleSymbols, toggleVisible, snapshotSourc
           <div className="index-list">
             {comparisonSymbols.map((symbol) => {
               const meta = metaFor(symbol, indexes);
-              const series = marketDataService.getHistoricalSeries(symbol, range, activeSnapshot);
+              const series = range === "1D"
+                ? marketDataService.getIntradaySeries(symbol, activeSnapshot)
+                : marketDataService.getHistoricalSeries(symbol, range, activeSnapshot);
               const normalized = normalizeSeriesToBase100(series);
               const normalizedValue = normalized[normalized.length - 1]?.value || 100;
               return (
