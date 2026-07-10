@@ -17,7 +17,7 @@ const profile: Record<string, { drift: number; wobble: number; phase: number; di
 const quoteBySymbol = Object.fromEntries(mockQuotes.map((quote) => [quote.symbol, quote]));
 
 function makeSeries(symbol: string, points: number, startValue: number, minutes = 30): Point[] {
-  const p = profile[symbol];
+  const p = profile[symbol] || { drift: 0.00045, wobble: 0.0035, phase: symbol.length * 0.37 };
   const out: Point[] = [];
   let value = startValue;
   for (let i = 0; i < points; i += 1) {
