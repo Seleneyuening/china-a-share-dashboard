@@ -1,7 +1,10 @@
+import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { calculateDollarVolume, calculateVolumeHeat, getGroupStanding, getStockPriceMomentumState, signed } from "../../services/calculations";
+import { getStockIntel } from "../../services/stockIntelService";
 import type { StockQuoteMock, ThemeGroupSummary } from "../../types/themeGroup";
 import type { TopVolumeComparisonRow } from "../../types/topVolume";
+import type { StockIntel } from "../../types/stockIntel";
 import { formatCompactMoney, formatSignedPct } from "../../utils/format";
 
 const momentumLabel: Record<string, string> = {
@@ -12,17 +15,33 @@ const momentumLabel: Record<string, string> = {
 };
 
 export function StockQuickDrawer({ stock, topRow, groupSummary, onClose }: { stock?: StockQuoteMock; topRow?: TopVolumeComparisonRow; groupSummary?: ThemeGroupSummary; onClose: () => void }) {
+  const [intel, setIntel] = useState<StockIntel>();
+  const [intelStatus, setIntelStatus] = useState<"loading" | "ready" | "error">("loading");
+
+  useEffect(() => {
+    if (!stock) return;
+    setIntel(undefined);
+    setIntelStatus("loading");
+    getStockIntel(stock.symbol)
+      .then((value) => {
+        setIntel(value);
+        setIntelStatus("ready");
+      })
+      .catch(() => setIntelStatus("error"));
+  }, [stock?.symbol]);
+
   if (!stock) return null;
   const dollarVolume = stock.dollarVolume ?? calculateDollarVolume(stock.price, stock.volume);
   const previousDollarVolume = stock.previousDollarVolume ?? calculateDollarVolume(stock.price, stock.previousVolume);
   const heat = calculateVolumeHeat(dollarVolume, previousDollarVolume);
   const momentum = getStockPriceMomentumState(stock.changePct, stock.previousChangePct);
   const standing = groupSummary ? getGroupStanding(groupSummary, stock.symbol) : undefined;
+  const latestRecommendation = intel?.recommendation[0];
   return (
     <div className="drawer-backdrop" onClick={onClose}>
       <aside className="stock-drawer" onClick={(event) => event.stopPropagation()}>
         <button className="icon-button close-button" onClick={onClose} aria-label="关闭"><X size={18} /></button>
-        <small>模拟数据</small>
+        <small>{stock.source && stock.source !== "mock" ? `${stock.source} 数据` : "模拟数据"}</small>
         <h2>{stock.symbol} {stock.companyName}</h2>
         <div className="big-number">${stock.price.toFixed(2)}</div>
         <span className={`momentum-pill ${momentum}`}>{momentumLabel[momentum]}</span>
@@ -61,6 +80,59 @@ export function StockQuickDrawer({ stock, topRow, groupSummary, onClose }: { sto
             </div>
           </>
         ) : null}
+
+        <h3>下一次财报</h3>
+        {intelStatus === "loading" && <p className="muted-note">加载中…</p>}
+        {intelStatus === "error" && <p className="muted-note">数据加载失败。</p>}
+        {intelStatus === "ready" && (
+          intel?.earnings ? (
+            <div className="summary-grid">
+              <div><b>{intel.earnings.date}</b><span>预计财报日</span></div>
+              {typeof intel.earnings.epsEstimate === "number" && <div><b>${intel.earnings.epsEstimate.toFixed(2)}</b><span>EPS 预期</span></div>}
+            </div>
+          ) : <p className="muted-note">近期没有安排的财报日期。</p>
+        )}
+
+        <h3>分析师推荐趋势</h3>
+        {intelStatus === "ready" && (
+          latestRecommendation ? (
+            <div className="summary-grid">
+              <div><b className="positive">{latestRecommendation.strongBuy}</b><span>强烈买入</span></div>
+              <div><b className="positive">{latestRecommendation.buy}</b><span>买入</span></div>
+              <div><b>{latestRecommendation.hold}</b><span>持有</span></div>
+              <div><b className="negative">{latestRecommendation.sell}</b><span>卖出</span></div>
+              <div><b className="negative">{latestRecommendation.strongSell}</b><span>强烈卖出</span></div>
+            </div>
+          ) : <p className="muted-note">暂无分析师推荐数据。</p>
+        )}
+
+        <h3>内部人交易</h3>
+        {intelStatus === "ready" && (
+          intel && intel.insider.length ? (
+            <ul className="alert-log-list">
+              {intel.insider.slice(0, 5).map((row, index) => (
+                <li key={`${row.name}-${row.transactionDate}-${index}`}>
+                  <span>{row.name}</span>
+                  <b className={row.change >= 0 ? "positive" : "negative"}>{row.change >= 0 ? "增持" : "减持"} {Math.abs(row.change).toLocaleString()} 股 · {row.transactionDate}</b>
+                </li>
+              ))}
+            </ul>
+          ) : <p className="muted-note">近期没有内部人交易记录。</p>
+        )}
+
+        <h3>最新新闻</h3>
+        {intelStatus === "ready" && (
+          intel && intel.news.length ? (
+            <ul className="alert-log-list">
+              {intel.news.slice(0, 3).map((item) => (
+                <li key={item.url}>
+                  <a href={item.url} target="_blank" rel="noreferrer">{item.headline}</a>
+                  <small>{item.source} · {new Date(item.datetime * 1000).toLocaleDateString("zh-CN")}</small>
+                </li>
+              ))}
+            </ul>
+          ) : <p className="muted-note">最近 7 天没有相关新闻。</p>
+        )}
 
         <p>NEW / OUT 表示榜单进入或退出；红绿颜色只表示股价涨跌。</p>
       </aside>

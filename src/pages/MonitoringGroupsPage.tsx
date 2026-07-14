@@ -7,15 +7,16 @@ import { StockQuickDrawer } from "../components/monitoring/StockQuickDrawer";
 import { mockThemeSnapshotMeta } from "../data/mockThemeSnapshots";
 import { marketDataService } from "../services/marketDataService";
 import { topVolumeService } from "../services/topVolumeService";
+import { useLiveStocks } from "../hooks/useLiveStocks";
 import type { StockQuoteMock } from "../types/themeGroup";
 import { formatCompactMoney, formatSignedPct } from "../utils/format";
 
 export function MonitoringGroupsPage() {
-  const [stocks] = useState(() => marketDataService.getStockQuotes());
+  const { stocks, source, ready, refresh } = useLiveStocks();
+  const liveStatus = ready ? `${source} 成交金额` : "成交金额加载中";
   const top50 = useMemo(() => topVolumeService.getComparison(stocks), [stocks]);
   const { currentTop50, rows } = top50;
   const top50Symbols = useMemo(() => new Set(currentTop50.map((entry) => entry.symbol)), [currentTop50]);
-  const [liveStatus] = useState("本地模拟成交额");
   const summaries = useMemo(() => marketDataService.getThemeGroupSummaries(top50Symbols, stocks), [top50Symbols, stocks]);
   const [selectedId, setSelectedId] = useState<string>(summaries[0].group.id);
   const [selectedStock, setSelectedStock] = useState<StockQuoteMock>();
@@ -33,7 +34,7 @@ export function MonitoringGroupsPage() {
           <span className="live-dot" /> A 股模拟盘
           <span>{mockThemeSnapshotMeta.updatedAt}</span>
           <span>{liveStatus}</span>
-          <button className="icon-button" aria-label="刷新"><RefreshCw size={16} /></button>
+          <button className="icon-button" aria-label="刷新" onClick={() => refresh(true)}><RefreshCw size={16} /></button>
           <button className="status">组管理</button>
           <button className="icon-button" aria-label="设置"><Settings size={16} /></button>
         </div>
@@ -54,7 +55,7 @@ export function MonitoringGroupsPage() {
         </div>
         <GroupSummaryPanel summary={selected} />
       </div>
-      <p className="mock-note">第一版使用本地 A 股模拟数据，不接入真实行情或线上密钥。</p>
+      <p className="mock-note">本页使用本地 A 股模拟数据，不接入真实行情或线上密钥。</p>
       <StockQuickDrawer
         stock={selectedStock}
         topRow={selectedStock ? topRowsBySymbol.get(selectedStock.symbol) : undefined}

@@ -1,17 +1,32 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { SolarSystemCanvas } from "../components/solar-system/SolarSystemCanvas";
 import { Top50Table } from "../components/top50/Top50Table";
 import { RankMigrationChart } from "../components/top50/RankMigrationChart";
 import { ChangeSummaryPanel } from "../components/top50/ChangeSummaryPanel";
 import { marketDataService } from "../services/marketDataService";
 import { topVolumeService } from "../services/topVolumeService";
+import { useLiveStocks } from "../hooks/useLiveStocks";
 
-const formatEtNow = () => "模拟盘 15:00 CST";
+function formatEtNow() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).format(new Date()).replace(",", "") + " ET";
+}
 
 export function ThemeSolarSystemPage() {
-  const [stocks] = useState(() => marketDataService.getStockQuotes());
-  const [quoteStatus] = useState("模拟成交额");
-  const [updatedAt] = useState(formatEtNow);
+  const { stocks, source, ready } = useLiveStocks();
+  const quoteStatus = ready ? `${source} 成交金额已更新` : "成交金额加载中";
+  const [updatedAt, setUpdatedAt] = useState(formatEtNow);
+  useEffect(() => {
+    if (ready) setUpdatedAt(formatEtNow());
+  }, [ready, stocks]);
   const top50 = useMemo(() => topVolumeService.getComparison(stocks), [stocks]);
   const top50Symbols = useMemo(() => new Set(top50.currentTop50.map((entry) => entry.symbol)), [top50.currentTop50]);
   const summaries = useMemo(() => marketDataService.getThemeGroupSummaries(top50Symbols, stocks), [top50Symbols, stocks]);
@@ -21,15 +36,14 @@ export function ThemeSolarSystemPage() {
       <div className="solar-layout">
         <SolarSystemCanvas summaries={summaries} updatedAt={updatedAt} quoteStatus={quoteStatus} />
       </div>
-      <p className="mock-note">第一版全部使用本地模拟数据，不接入真实行情或线上密钥。</p>
+      <p className="mock-note">本页使用本地 A 股模拟数据，不接入真实行情或线上密钥。</p>
     </section>
   );
 }
 
 export function ThemeTop50Page() {
-  const [stocks] = useState(() => marketDataService.getStockQuotes());
-  const [topVolumeSource] = useState("本地模拟数据");
-  const [topVolumeUpdatedAt] = useState("15:00:00");
+  const { stocks, source: topVolumeSource, updatedAt } = useLiveStocks();
+  const topVolumeUpdatedAt = updatedAt ? new Date(updatedAt).toLocaleTimeString("en-US", { hour12: false }) : "";
   const top50 = useMemo(() => topVolumeService.getComparison(stocks), [stocks]);
   const comparisonBySymbol = useMemo(() => new Map(top50.rows.map((row) => [row.symbol, row])), [top50.rows]);
   const [activeSymbol, setActiveSymbol] = useState<string>();

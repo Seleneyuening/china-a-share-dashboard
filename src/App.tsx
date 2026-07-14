@@ -1,4 +1,4 @@
-import { BarChart3, Bell, Eye, Globe2, LayoutGrid, LineChart as LineIcon, Moon, RefreshCw, SlidersHorizontal, Star, Sun } from "lucide-react";
+import { Activity, BarChart3, Beaker, Bell, Eye, FlaskConical, Gauge, Globe2, History, LayoutGrid, LineChart as LineIcon, Moon, Newspaper, RefreshCw, SlidersHorizontal, Star, Sun, Wallet } from "lucide-react";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import {
   Area,
@@ -24,7 +24,14 @@ import {
 } from "recharts";
 import { comparisonSymbols, indexes, mainSymbols, markets } from "./data/markets";
 import { AlertsPage } from "./pages/AlertsPage";
+import { AnomalyRadarPage } from "./pages/AnomalyRadarPage";
+import { HistoryReplayPage } from "./pages/HistoryReplayPage";
+import { MarketJournalPage } from "./pages/MarketJournalPage";
 import { MonitoringGroupsPage } from "./pages/MonitoringGroupsPage";
+import { PatternLabPage } from "./pages/PatternLabPage";
+import { StrategyLabPage } from "./pages/StrategyLabPage";
+import { PaperPortfolioPage } from "./pages/PaperPortfolioPage";
+import { PortfolioCommandPage } from "./pages/PortfolioCommandPage";
 import { ThemeSolarSystemPage, ThemeTop50Page } from "./pages/ThemeSolarSystemPage";
 import { marketDataService } from "./services/marketDataService";
 import { getMockSnapshot } from "./services/mockMarketSnapshot";
@@ -32,9 +39,10 @@ import { alertStorage } from "./services/alertStorage";
 import { bySymbol, calculateCorrelation, calculateRelativeStrength, calculateReturn, getMarketStatus, metaFor, normalizeSeriesToBase100, signed } from "./services/calculations";
 import type { IndexMeta, Point, RangeKey } from "./types";
 
-type Page = "overview" | "intraday" | "overlay" | "compare" | "monitoringGroups" | "themeSolarSystem" | "themeTop50" | "alerts";
+type Page = "marketJournal" | "overview" | "intraday" | "overlay" | "compare" | "monitoringGroups" | "themeSolarSystem" | "themeTop50" | "anomalyRadar" | "historyReplay" | "patternLab" | "strategyLab" | "paperPortfolio" | "portfolioCommand" | "alerts";
 
 const navItems: Array<{ id: Page; label: string; icon: typeof LayoutGrid }> = [
+  { id: "marketJournal", label: "市场日志", icon: Newspaper },
   { id: "overview", label: "总览", icon: LayoutGrid },
   { id: "intraday", label: "分时图", icon: LineIcon },
   { id: "overlay", label: "叠加图", icon: BarChart3 },
@@ -42,6 +50,12 @@ const navItems: Array<{ id: Page; label: string; icon: typeof LayoutGrid }> = [
   { id: "monitoringGroups", label: "监控组", icon: Star },
   { id: "themeSolarSystem", label: "主题", icon: Sun },
   { id: "themeTop50", label: "榜单变化", icon: BarChart3 },
+  { id: "anomalyRadar", label: "异动雷达", icon: Activity },
+  { id: "historyReplay", label: "历史回放", icon: History },
+  { id: "patternLab", label: "模式实验室", icon: FlaskConical },
+  { id: "strategyLab", label: "策略实验室", icon: Beaker },
+  { id: "paperPortfolio", label: "虚拟组合", icon: Wallet },
+  { id: "portfolioCommand", label: "组合指挥中心", icon: Gauge },
   { id: "alerts", label: "自定义提醒", icon: Bell },
 ];
 
@@ -160,6 +174,7 @@ function App() {
           </div>
         </header>
 
+        {page === "marketJournal" && <MarketJournalPage />}
         {page === "overview" && <Overview rankMode={rankMode} setRankMode={setRankMode} openIntraday={openIntraday} />}
         {page === "intraday" && <Intraday selectedSymbol={selectedSymbol} setSelectedSymbol={setSelectedSymbol} showPrevClose={showPrevClose} setShowPrevClose={setShowPrevClose} />}
         {page === "overlay" && <Overlay range={range} setRange={setRange} visibleSymbols={visibleSymbols} toggleVisible={toggleVisible} snapshotSource={snapshot.source} />}
@@ -167,6 +182,12 @@ function App() {
         {page === "monitoringGroups" && <MonitoringGroupsPage />}
         {page === "themeSolarSystem" && <ThemeSolarSystemPage />}
         {page === "themeTop50" && <ThemeTop50Page />}
+        {page === "anomalyRadar" && <AnomalyRadarPage />}
+        {page === "historyReplay" && <HistoryReplayPage />}
+        {page === "patternLab" && <PatternLabPage />}
+        {page === "strategyLab" && <StrategyLabPage />}
+        {page === "paperPortfolio" && <PaperPortfolioPage />}
+        {page === "portfolioCommand" && <PortfolioCommandPage />}
         {page === "alerts" && <AlertsPage />}
 
       </main>
@@ -335,9 +356,7 @@ function Overlay({ range, setRange, visibleSymbols, toggleVisible, snapshotSourc
   const data = useMemo(() => {
     const rows: Record<string, string | number>[] = [];
     comparisonSymbols.forEach((symbol) => {
-      const series = range === "1D"
-        ? marketDataService.getIntradaySeries(symbol, activeSnapshot)
-        : marketDataService.getHistoricalSeries(symbol, range, activeSnapshot);
+      const series = range === "1D" ? marketDataService.getIntradaySeries(symbol, activeSnapshot) : marketDataService.getHistoricalSeries(symbol, range, activeSnapshot);
       smoothSeries(normalizeSeriesToBase100(series)).forEach((point, i) => {
         rows[i] = rows[i] || { time: point.time };
         rows[i][symbol] = point.value;
@@ -372,9 +391,7 @@ function Overlay({ range, setRange, visibleSymbols, toggleVisible, snapshotSourc
           <div className="index-list">
             {comparisonSymbols.map((symbol) => {
               const meta = metaFor(symbol, indexes);
-              const series = range === "1D"
-                ? marketDataService.getIntradaySeries(symbol, activeSnapshot)
-                : marketDataService.getHistoricalSeries(symbol, range, activeSnapshot);
+              const series = range === "1D" ? marketDataService.getIntradaySeries(symbol, activeSnapshot) : marketDataService.getHistoricalSeries(symbol, range, activeSnapshot);
               const normalized = normalizeSeriesToBase100(series);
               const normalizedValue = normalized[normalized.length - 1]?.value || 100;
               return (
@@ -418,7 +435,7 @@ function CorrelationMatrix() {
   const symbols = comparisonSymbols;
   return (
     <div className="panel heat-panel">
-      <h2>与 S&P 500 的相关性（近20日）</h2>
+      <h2>主要 A 股指数相关性（近20日）</h2>
       <div className="heatmap" style={{ gridTemplateColumns: `110px repeat(${symbols.length}, 1fr)` }}>
         <span />
         {symbols.map((symbol) => <b key={symbol}>{metaFor(symbol, indexes).name}</b>)}
@@ -440,8 +457,8 @@ function CorrelationMatrix() {
 
 function Compare() {
   const barData = comparisonSymbols.map((symbol) => ({ name: metaFor(symbol, indexes).name, value: quoteBySymbol[symbol].changePct, color: quoteBySymbol[symbol].changePct >= 0 ? "#4fd06f" : "#ff5252" }));
-  const base = marketDataService.getHistoricalSeries("SPX", "1M", activeSnapshot);
-  const strength = comparisonSymbols.filter((s) => s !== "SPX").map((symbol) => ({ name: metaFor(symbol, indexes).name, value: calculateRelativeStrength(base, marketDataService.getHistoricalSeries(symbol, "1M", activeSnapshot)) }));
+  const base = marketDataService.getHistoricalSeries("000001.SH", "1M", activeSnapshot);
+  const strength = comparisonSymbols.filter((s) => s !== "000001.SH").map((symbol) => ({ name: metaFor(symbol, indexes).name, value: calculateRelativeStrength(base, marketDataService.getHistoricalSeries(symbol, "1M", activeSnapshot)) }));
   const radar = comparisonSymbols.slice(0, 6).map((symbol) => ({ market: metaFor(symbol, indexes).name, 涨跌幅: Math.max(10, quoteBySymbol[symbol].changePct * 22 + 50), 波动率: 70 - Math.abs(quoteBySymbol[symbol].changePct) * 8, 相对强弱: 50 + calculateRelativeStrength(base, marketDataService.getHistoricalSeries(symbol, "1M", activeSnapshot)) * 4 }));
   const pie = [{ name: "同向", value: 4, fill: "#4fd06f" }, { name: "反向", value: 2, fill: "#ff5252" }, { name: "弱相关", value: 1, fill: "#748094" }];
   return (
@@ -517,16 +534,16 @@ function MetricsTable() {
 
 function SummaryCards() {
   const cards = [
-    ["领涨市场", "Nikkei 225", "+6.21%", "日本市场近 20 日表现强于 S&P 500，近期走势相对领先。"],
-    ["强势市场", "KOSPI", "+3.78%", "韩国市场表现较强，半导体板块带动整体上行。"],
-    ["跟随市场", "S&P 500", "+2.31%", "美国大盘稳步上行，市场情绪谨慎乐观。"],
-    ["弱势市场", "恒生科技", "-3.15%", "中概科技股承压，受监管及盈利预期影响。"],
-    ["滞后市场", "沪深 300", "-4.98%", "内地市场表现磨底，受到经济数据及政策预期影响。"],
+    ["领涨指数", "科创 50", "+2.31%", "科创与成长板块近期相对强势。"],
+    ["强势指数", "创业板指", "+1.76%", "新能源与科技成长方向带动市场。"],
+    ["市场基准", "上证指数", "+0.82%", "大盘指数稳步运行，市场情绪偏暖。"],
+    ["相对偏弱", "中证 500", "-0.46%", "中小盘出现分化，资金保持谨慎。"],
+    ["核心资产", "沪深 300", "+0.65%", "核心资产表现平稳，关注成交量变化。"],
   ];
   return (
     <div className="summary-cards">
       {cards.map(([title, symbolName, value, text], index) => {
-        const symbol = ["NKY", "KOSPI", "SPX", "HSTECH", "CSI300"][index];
+        const symbol = ["000688.SH", "399006.SZ", "000001.SH", "000905.SH", "000300.SH"][index];
         return <div className="panel summary" key={title}><h3>{title}</h3><b className={value.startsWith("+") ? "positive" : "negative"}>{symbolName} {value}</b><MiniLine data={marketDataService.getHistoricalSeries(symbol, "1M", activeSnapshot)} color={value.startsWith("+") ? "#4fd06f" : "#ff5252"} /><p>{text}</p></div>;
       })}
     </div>

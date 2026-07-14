@@ -1,4 +1,4 @@
-export type MarketRegion = "US" | "JP" | "KR" | "CN" | "HK" | "UK";
+export type MarketRegion = "CN";
 export type RangeKey = "1D" | "5D" | "1M" | "3M" | "6M" | "YTD" | "1Y";
 
 export type Market = {

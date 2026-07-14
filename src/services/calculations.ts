@@ -53,7 +53,7 @@ function minutes(value: string): number {
 
 export function getCurrentEt(): string {
   const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "Asia/Shanghai",
+    timeZone: "America/New_York",
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
