@@ -68,7 +68,7 @@ export function GroupStockTable({ stocks, topRowsBySymbol, onSelect }: { stocks:
             return (
               <tr key={stock.symbol} onClick={() => onSelect(stock)}>
                 <td><b>{stock.symbol}</b><small>{stock.companyName}</small></td>
-                <td>${stock.price.toFixed(2)}</td>
+                <td>¥{stock.price.toFixed(2)}</td>
                 <td className={stock.changePct >= 0 ? "positive" : "negative"}>{formatSignedPct(stock.changePct)}</td>
                 <td className={stock.previousChangePct >= 0 ? "positive" : "negative"}>{formatSignedPct(stock.previousChangePct)}</td>
                 <td>{formatCompactMoney(dollarVolume)}</td>

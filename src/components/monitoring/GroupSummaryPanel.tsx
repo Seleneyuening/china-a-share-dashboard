@@ -24,7 +24,7 @@ export function GroupSummaryPanel({ summary }: { summary: ThemeGroupSummary }) {
         <BarChart data={top3} layout="vertical">
           <XAxis type="number" hide />
           <YAxis type="category" dataKey="name" width={54} stroke="#9cabbc" />
-          <Tooltip contentStyle={{ background: "#091523", border: "1px solid #1d3044" }} formatter={(value) => [`$${value}B`, "成交额"]} />
+          <Tooltip contentStyle={{ background: "#091523", border: "1px solid #1d3044" }} formatter={(value) => [`¥${value}亿`, "成交额"]} />
           <Bar dataKey="value" fill="#25d18c" radius={[0, 4, 4, 0]} />
         </BarChart>
       </ResponsiveContainer>

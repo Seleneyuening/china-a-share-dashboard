@@ -43,7 +43,7 @@ export function StockQuickDrawer({ stock, topRow, groupSummary, onClose }: { sto
         <button className="icon-button close-button" onClick={onClose} aria-label="关闭"><X size={18} /></button>
         <small>{stock.source && stock.source !== "mock" ? `${stock.source} 数据` : "模拟数据"}</small>
         <h2>{stock.symbol} {stock.companyName}</h2>
-        <div className="big-number">${stock.price.toFixed(2)}</div>
+        <div className="big-number">¥{stock.price.toFixed(2)}</div>
         <span className={`momentum-pill ${momentum}`}>{momentumLabel[momentum]}</span>
 
         <h3>价格表现</h3>

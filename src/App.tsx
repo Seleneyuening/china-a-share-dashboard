@@ -268,9 +268,9 @@ function Timeline() {
       <div className="time-scale"><span>00:00</span><span>04:00</span><span>08:00</span><span>12:00</span><span>16:00</span><span>20:00</span><span>24:00</span></div>
       <div className="sessions">
         {markets.map((market) => (
-          <div key={market.id} className={`session ${getMarketStatus(market) === "交易中" ? "live" : ""}`} title={`${market.name}: ${market.openEt} - ${market.closeEt} ET / ${market.timezone}`}>
+          <div key={market.id} className={`session ${getMarketStatus(market) === "交易中" ? "live" : ""}`} title={`${market.name}: ${market.openEt} - ${market.closeEt} ${market.timezone}`}>
             <span>{market.sessionLabel}</span>
-            <small>{market.openEt} - {market.closeEt} ET</small>
+            <small>{market.openEt} - {market.closeEt} {market.timezone}</small>
           </div>
         ))}
       </div>
