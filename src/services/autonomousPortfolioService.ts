@@ -25,6 +25,34 @@ export type StrategyUpdate = {
   benchmarkPeriodReturn: number;
   reason: string;
   changes: string[];
+  action: "升级" | "调整" | "回退";
+};
+
+export type BestStrategyRecord = {
+  config: StrategyConfig;
+  day: number;
+  qualityScore: number;
+  portfolioPeriodReturn: number;
+  benchmarkPeriodReturn: number;
+};
+
+export type PerformanceMetrics = {
+  closedTrades: number;
+  winRate: number;
+  profitFactor: number;
+  maxDrawdown: number;
+  totalFees: number;
+  feeDragPct: number;
+  turnoverPct: number;
+};
+
+export type StressTestResult = {
+  id: "bull" | "range" | "bear" | "shock";
+  name: string;
+  description: string;
+  returnPct: number;
+  maxDrawdown: number;
+  status: "通过" | "承压" | "危险";
 };
 
 export type AutoPosition = {
@@ -71,6 +99,7 @@ export type AutoPortfolioState = {
   snapshots: AutoSnapshot[];
   strategy: StrategyConfig;
   strategyUpdates: StrategyUpdate[];
+  bestStrategy: BestStrategyRecord;
 };
 
 export type RankedCandidate = StockQuoteMock & { score: number; reason: string; groupName: string };
@@ -147,6 +176,7 @@ function initialState(): AutoPortfolioState {
     snapshots: [{ day: 0, equity: initialCapital, cash: initialCapital, cumulativeReturn: 0, benchmarkReturn: 0, drawdown: 0 }],
     strategy: { ...defaultStrategy },
     strategyUpdates: [],
+    bestStrategy: { config: { ...defaultStrategy }, day: 0, qualityScore: -999, portfolioPeriodReturn: 0, benchmarkPeriodReturn: 0 },
   };
 }
 
@@ -157,6 +187,8 @@ function readState(): AutoPortfolioState {
     const state = JSON.parse(value) as AutoPortfolioState;
     state.strategy ||= { ...defaultStrategy };
     state.strategyUpdates ||= [];
+    state.bestStrategy ||= { config: { ...state.strategy }, day: 0, qualityScore: -999, portfolioPeriodReturn: 0, benchmarkPeriodReturn: 0 };
+    for (const update of state.strategyUpdates) update.action ||= "升级";
     for (const stock of universe) state.prices[stock.symbol] ??= stock.price;
     return state;
   } catch {
@@ -206,8 +238,37 @@ function optimizeStrategy(state: AutoPortfolioState) {
   const portfolioPeriodReturn = round((end.equity / start.equity - 1) * 100);
   const benchmarkPeriodReturn = round((1 + end.benchmarkReturn / 100) / (1 + start.benchmarkReturn / 100) * 100 - 100);
   const relative = portfolioPeriodReturn - benchmarkPeriodReturn;
+  const qualityScore = round(relative + portfolioPeriodReturn * 0.2 + end.drawdown * 0.35);
+  const evaluatedStrategy = { ...state.strategy };
   const strategy = { ...state.strategy, version: state.strategy.version + 1 };
   const changes: string[] = [];
+  let action: StrategyUpdate["action"] = "升级";
+
+  const qualifiesAsBest = relative >= 0 && portfolioPeriodReturn > -1 && end.drawdown > -6;
+  if (qualifiesAsBest && qualityScore > state.bestStrategy.qualityScore) {
+    state.bestStrategy = { config: evaluatedStrategy, day: state.day, qualityScore, portfolioPeriodReturn, benchmarkPeriodReturn };
+    changes.push(`保存 V${evaluatedStrategy.version} 为历史最佳策略`);
+  }
+
+  const shouldRollback = state.bestStrategy.day > 0
+    && state.bestStrategy.config.version !== evaluatedStrategy.version
+    && (relative < -2 || portfolioPeriodReturn < -3 || end.drawdown <= -6);
+
+  if (shouldRollback) {
+    state.strategy = { ...state.bestStrategy.config, version: strategy.version };
+    action = "回退";
+    changes.push(`挑战版本未通过，回退至 D${state.bestStrategy.day} 的最佳参数`);
+    state.strategyUpdates.unshift({
+      day: state.day,
+      version: state.strategy.version,
+      portfolioPeriodReturn,
+      benchmarkPeriodReturn,
+      reason: `挑战策略落后基准 ${round(Math.abs(relative))}%，已自动回退`,
+      changes,
+      action,
+    });
+    return;
+  }
 
   if (relative >= 0) {
     strategy.momentumWeight = round(clamp(strategy.momentumWeight + 0.15, 2.5, 5));
@@ -217,6 +278,7 @@ function optimizeStrategy(state: AutoPortfolioState) {
     if (relative > 2 && end.drawdown > -4) strategy.maxPositions = Math.min(8, strategy.maxPositions + 1);
     changes.push("提高动量权重", "增加目标投入", "降低随机探索", "放宽止盈空间");
   } else {
+    action = "调整";
     strategy.heatWeight = round(clamp(strategy.heatWeight + 0.4, 2, 7));
     strategy.trendWeight = round(clamp(strategy.trendWeight + 0.03, 0.15, 0.5));
     strategy.explorationRate = round(clamp(strategy.explorationRate + 0.05, 0.03, 0.35));
@@ -237,6 +299,52 @@ function optimizeStrategy(state: AutoPortfolioState) {
     benchmarkPeriodReturn,
     reason: relative >= 0 ? `最近 20 日跑赢基准 ${round(relative)}%` : `最近 20 日落后基准 ${round(Math.abs(relative))}%`,
     changes,
+    action,
+  });
+}
+
+function performanceMetrics(state: AutoPortfolioState): PerformanceMetrics {
+  const closed = state.trades.filter((trade) => typeof trade.realizedPnl === "number");
+  const wins = closed.filter((trade) => (trade.realizedPnl ?? 0) > 0);
+  const grossProfit = wins.reduce((sum, trade) => sum + (trade.realizedPnl ?? 0), 0);
+  const grossLoss = Math.abs(closed.filter((trade) => (trade.realizedPnl ?? 0) < 0).reduce((sum, trade) => sum + (trade.realizedPnl ?? 0), 0));
+  const totalFees = state.trades.reduce((sum, trade) => sum + trade.fee, 0);
+  const turnover = state.trades.reduce((sum, trade) => sum + trade.quantity * trade.price, 0);
+  const averageEquity = state.snapshots.reduce((sum, snapshot) => sum + snapshot.equity, 0) / Math.max(state.snapshots.length, 1);
+  return {
+    closedTrades: closed.length,
+    winRate: round(closed.length ? wins.length / closed.length * 100 : 0),
+    profitFactor: round(grossLoss ? grossProfit / grossLoss : grossProfit > 0 ? 99 : 0),
+    maxDrawdown: round(Math.min(...state.snapshots.map((snapshot) => snapshot.drawdown))),
+    totalFees: round(totalFees),
+    feeDragPct: round(totalFees / state.initialCapital * 100),
+    turnoverPct: round(turnover / Math.max(averageEquity, 1) * 100),
+  };
+}
+
+function stressTests(state: AutoPortfolioState): StressTestResult[] {
+  const selected = universe.map((stock) => scoreStock(stock, state)).sort((a, b) => b.score - a.score).slice(0, state.strategy.maxPositions);
+  const scenarios: Array<{ id: StressTestResult["id"]; name: string; description: string; adjust: (base: number, day: number) => number }> = [
+    { id: "bull", name: "趋势上涨", description: "市场每日提供正向趋势", adjust: (base) => base * 0.85 + 0.45 },
+    { id: "range", name: "横盘震荡", description: "趋势减弱并反复波动", adjust: (base, day) => base * 0.3 + Math.sin(day * 1.6) * 0.35 },
+    { id: "bear", name: "持续下跌", description: "市场连续承受负向压力", adjust: (base) => base * 0.65 - 1.25 },
+    { id: "shock", name: "突发下跌", description: "第 6 日出现单日急跌", adjust: (base, day) => day === 6 ? -7 : base * 0.75 + 0.05 },
+  ];
+  return scenarios.map((scenario) => {
+    let equity = 100;
+    let peak = 100;
+    let maxDrawdown = 0;
+    for (let day = 1; day <= 20; day += 1) {
+      const rawReturn = selected.reduce((sum, stock) => sum + scenario.adjust(simulatedReturn(stock, state.day + day), day), 0) / Math.max(selected.length, 1);
+      const controlledReturn = Math.max(rawReturn, -state.strategy.stopLossPct) * state.strategy.targetInvestedRatio;
+      equity *= 1 + controlledReturn / 100;
+      peak = Math.max(peak, equity);
+      maxDrawdown = Math.min(maxDrawdown, (equity / peak - 1) * 100);
+    }
+    const returnPct = round(equity - 100);
+    const drawdown = round(maxDrawdown);
+    const status: StressTestResult["status"] = drawdown <= -8 || returnPct <= -10 ? "危险" : drawdown <= -4 || returnPct < 0 ? "承压" : "通过";
+    return { id: scenario.id, name: scenario.name, description: scenario.description, returnPct, maxDrawdown: drawdown, status };
   });
 }
 
@@ -304,6 +412,8 @@ export const autonomousPortfolioService = {
   getState: readState,
   getUniverseSize: () => universe.length,
   getRankedCandidates(state = readState()): RankedCandidate[] { return universe.map((stock) => scoreStock(stock, state)).sort((a, b) => b.score - a.score); },
+  getPerformanceMetrics(state = readState()): PerformanceMetrics { return performanceMetrics(state); },
+  runStressTests(state = readState()): StressTestResult[] { return stressTests(state); },
   runDays(days: number): AutoPortfolioState {
     let state = readState();
     for (let index = 0; index < days; index += 1) state = runOneDay(state);

@@ -42,23 +42,23 @@ import type { IndexMeta, Point, RangeKey } from "./types";
 
 type Page = "marketJournal" | "overview" | "intraday" | "overlay" | "compare" | "monitoringGroups" | "themeSolarSystem" | "themeTop50" | "anomalyRadar" | "historyReplay" | "patternLab" | "strategyLab" | "paperPortfolio" | "portfolioRecord" | "portfolioCommand" | "alerts";
 
-const navItems: Array<{ id: Page; label: string; icon: typeof LayoutGrid }> = [
-  { id: "marketJournal", label: "市场日志", icon: Newspaper },
-  { id: "overview", label: "总览", icon: LayoutGrid },
-  { id: "intraday", label: "分时图", icon: LineIcon },
-  { id: "overlay", label: "叠加图", icon: BarChart3 },
-  { id: "compare", label: "对比分析", icon: SlidersHorizontal },
-  { id: "monitoringGroups", label: "监控组", icon: Star },
-  { id: "themeSolarSystem", label: "主题", icon: Sun },
-  { id: "themeTop50", label: "榜单变化", icon: BarChart3 },
-  { id: "anomalyRadar", label: "异动雷达", icon: Activity },
-  { id: "historyReplay", label: "历史回放", icon: History },
-  { id: "patternLab", label: "模式实验室", icon: FlaskConical },
-  { id: "strategyLab", label: "策略实验室", icon: Beaker },
-  { id: "paperPortfolio", label: "自主操盘", icon: Wallet },
-  { id: "portfolioRecord", label: "资金与交易记录", icon: BookOpenText },
-  { id: "portfolioCommand", label: "组合指挥中心", icon: Gauge },
-  { id: "alerts", label: "自定义提醒", icon: Bell },
+const navItems: Array<{ id: Page; label: string; icon: typeof LayoutGrid; group: "市场观察" | "研究工具" | "虚拟账户" }> = [
+  { id: "marketJournal", label: "市场日志", icon: Newspaper, group: "市场观察" },
+  { id: "overview", label: "总览", icon: LayoutGrid, group: "市场观察" },
+  { id: "intraday", label: "分时图", icon: LineIcon, group: "市场观察" },
+  { id: "overlay", label: "叠加图", icon: BarChart3, group: "市场观察" },
+  { id: "compare", label: "对比分析", icon: SlidersHorizontal, group: "市场观察" },
+  { id: "monitoringGroups", label: "监控组", icon: Star, group: "市场观察" },
+  { id: "themeSolarSystem", label: "主题", icon: Sun, group: "市场观察" },
+  { id: "themeTop50", label: "榜单变化", icon: BarChart3, group: "市场观察" },
+  { id: "anomalyRadar", label: "异动雷达", icon: Activity, group: "市场观察" },
+  { id: "historyReplay", label: "历史回放", icon: History, group: "研究工具" },
+  { id: "patternLab", label: "模式实验室", icon: FlaskConical, group: "研究工具" },
+  { id: "strategyLab", label: "策略实验室", icon: Beaker, group: "研究工具" },
+  { id: "paperPortfolio", label: "自主操盘", icon: Wallet, group: "虚拟账户" },
+  { id: "portfolioRecord", label: "资金与交易记录", icon: BookOpenText, group: "虚拟账户" },
+  { id: "portfolioCommand", label: "组合指挥中心", icon: Gauge, group: "虚拟账户" },
+  { id: "alerts", label: "自定义提醒", icon: Bell, group: "虚拟账户" },
 ];
 
 const alertPollIntervalMs = 30 * 1000;
@@ -141,13 +141,16 @@ function App() {
           </div>
         </div>
         <nav>
-          {navItems.map((item) => {
+          {navItems.map((item, index) => {
             const Icon = item.icon;
             return (
-              <button key={item.id} className={page === item.id ? "active" : ""} onClick={() => setPage(item.id)}>
-                <Icon size={18} />
-                <span>{item.label}</span>
-              </button>
+              <Fragment key={item.id}>
+                {(index === 0 || navItems[index - 1].group !== item.group) && <span className="nav-section-label">{item.group}</span>}
+                <button className={page === item.id ? "active" : ""} onClick={() => setPage(item.id)}>
+                  <Icon size={18} />
+                  <span>{item.label}</span>
+                </button>
+              </Fragment>
             );
           })}
         </nav>

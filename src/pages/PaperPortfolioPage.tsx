@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Bot, Play, RotateCcw, ShieldCheck, TrendingUp, Wallet } from "lucide-react";
-import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Area, CartesianGrid, ComposedChart, Legend, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { autonomousPortfolioService, type AutoPortfolioState } from "../services/autonomousPortfolioService";
 import { formatCompactMoney, formatSignedPct } from "../utils/format";
 
@@ -12,6 +12,8 @@ export function PaperPortfolioPage() {
   const latest = state.snapshots[state.snapshots.length - 1];
   const universeSize = autonomousPortfolioService.getUniverseSize();
   const candidates = useMemo(() => autonomousPortfolioService.getRankedCandidates(state).slice(0, 10), [state]);
+  const metrics = useMemo(() => autonomousPortfolioService.getPerformanceMetrics(state), [state]);
+  const stressTests = useMemo(() => autonomousPortfolioService.runStressTests(state), [state]);
   const positionValue = state.positions.reduce((sum, position) => sum + position.quantity * position.lastPrice, 0);
 
   function run(days: number) {
@@ -51,15 +53,17 @@ export function PaperPortfolioPage() {
         <div className="v2-card auto-chart-card">
           <div className="v2-card-head"><div><h2>资金曲线</h2><small>已模拟 {state.day} 个交易日 · 含佣金与卖出印花税</small></div></div>
           <ResponsiveContainer width="100%" height={310}>
-            <LineChart data={state.snapshots}>
+            <ComposedChart data={state.snapshots}>
+              <defs><linearGradient id="portfolioReturnFill" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#2f83ff" stopOpacity={0.35} /><stop offset="95%" stopColor="#2f83ff" stopOpacity={0.02} /></linearGradient></defs>
               <CartesianGrid {...baseGrid} />
               <XAxis dataKey="day" stroke="#8ea0b4" tickFormatter={(value) => `D${value}`} />
-              <YAxis stroke="#8ea0b4" tickFormatter={(value) => `${value}%`} />
+              <YAxis stroke="#8ea0b4" domain={["auto", "auto"]} tickFormatter={(value) => `${value}%`} />
               <Tooltip contentStyle={{ background: "#091523", border: "1px solid #1d3044" }} />
               <Legend />
-              <Line type="monotone" dataKey="cumulativeReturn" name="自主组合" stroke="#2f83ff" strokeWidth={3} dot={false} />
-              <Line type="monotone" dataKey="benchmarkReturn" name="等权基准" stroke="#ffd24a" strokeWidth={2} dot={false} />
-            </LineChart>
+              <ReferenceLine y={0} stroke="#53677c" />
+              <Area type="monotone" dataKey="cumulativeReturn" name="自主组合" stroke="#53a1ff" fill="url(#portfolioReturnFill)" strokeWidth={3} dot={false} isAnimationActive={false} />
+              <Line type="monotone" dataKey="benchmarkReturn" name="等权基准" stroke="#ffd24a" strokeWidth={2} dot={false} isAnimationActive={false} />
+            </ComposedChart>
           </ResponsiveContainer>
         </div>
 
@@ -69,12 +73,31 @@ export function PaperPortfolioPage() {
             <li><b>目标：</b>在控制回撤的前提下提高虚拟资金净值</li>
             <li><b>选股：</b>扫描 {universeSize.toLocaleString()} 只沪深股票，不受榜单 50 限制</li>
             <li><b>策略：</b>动量权重 {state.strategy.momentumWeight}、热度权重 {state.strategy.heatWeight}、探索率 {Math.round(state.strategy.explorationRate * 100)}%</li>
+            <li><b>最佳版本：</b>{state.bestStrategy.day ? `D${state.bestStrategy.day} · V${state.bestStrategy.config.version} · 质量分 ${state.bestStrategy.qualityScore}` : "等待首个 20 日评估周期"}</li>
             <li><b>仓位：</b>最多 {state.strategy.maxPositions} 只，目标投入 {Math.round(state.strategy.targetInvestedRatio * 100)}%，优先分散板块</li>
             <li><b>买入：</b>综合评分大于 1，按 100 股整手成交</li>
             <li><b>卖出：</b>-{state.strategy.stopLossPct}% 止损、+{state.strategy.takeProfitPct}% 止盈、评分转弱或持有 {state.strategy.maxHoldDays} 日</li>
             <li><b>制度：</b>按日模拟 T+1，买卖计佣金，卖出计印花税</li>
           </ul>
         </div>
+      </div>
+
+      <div className="strategy-metric-grid">
+        <div className="v2-card mini-metric"><span>已完成交易</span><strong>{metrics.closedTrades} 笔</strong></div>
+        <div className="v2-card mini-metric"><span>交易胜率</span><strong>{metrics.winRate.toFixed(1)}%</strong></div>
+        <div className="v2-card mini-metric"><span>盈亏比</span><strong>{metrics.profitFactor >= 99 ? "无亏损" : metrics.profitFactor.toFixed(2)}</strong></div>
+        <div className="v2-card mini-metric"><span>历史最大回撤</span><strong className="negative">{formatSignedPct(metrics.maxDrawdown)}</strong></div>
+        <div className="v2-card mini-metric"><span>累计交易费用</span><strong>{formatCompactMoney(metrics.totalFees)}</strong><small>侵蚀本金 {metrics.feeDragPct.toFixed(2)}%</small></div>
+        <div className="v2-card mini-metric"><span>累计换手</span><strong>{metrics.turnoverPct.toFixed(0)}%</strong></div>
+      </div>
+
+      <div className="v2-card stress-test-card">
+        <div className="v2-card-head"><div><h2>多市场环境压力测试</h2><small>用当前策略参数估算未来 20 个模拟交易日；不影响账户资金</small></div></div>
+        <div className="stress-test-grid">{stressTests.map((test) => <article key={test.id} className={`stress-result ${test.status === "危险" ? "danger" : test.status === "承压" ? "warning" : "pass"}`}>
+          <div><strong>{test.name}</strong><span className="tag">{test.status}</span></div>
+          <small>{test.description}</small>
+          <p><span>预计收益 <b className={test.returnPct >= 0 ? "positive" : "negative"}>{formatSignedPct(test.returnPct)}</b></span><span>最大回撤 <b className="negative">{formatSignedPct(test.maxDrawdown)}</b></span></p>
+        </article>)}</div>
       </div>
 
       <div className="v2-card">
@@ -108,7 +131,7 @@ export function PaperPortfolioPage() {
         {state.strategyUpdates.length ? <div className="strategy-update-grid">{state.strategyUpdates.slice(0, 6).map((update) => {
           const relative = update.portfolioPeriodReturn - update.benchmarkPeriodReturn;
           return <article key={`${update.day}-${update.version}`}>
-            <span className="tag green">V{update.version} · D{update.day}</span>
+            <span className={`tag ${update.action === "回退" ? "red" : "green"}`}>{update.action} · V{update.version} · D{update.day}</span>
             <strong>{update.reason}</strong>
             <small>组合 {formatSignedPct(update.portfolioPeriodReturn)} · 基准 {formatSignedPct(update.benchmarkPeriodReturn)} · 相对 <span className={relative >= 0 ? "positive" : "negative"}>{formatSignedPct(relative)}</span></small>
             <p>{update.changes.join("、")}</p>

@@ -33,6 +33,7 @@ button {
   padding: 24px 18px;
   border-right: 1px solid #17283a;
   background: #07111e;
+  overflow-y: auto;
 }
 
 .brand {
@@ -60,6 +61,8 @@ nav {
   display: grid;
   gap: 8px;
 }
+
+.nav-section-label { margin: 13px 10px 2px; color: #5f748a; font-size: 11px; font-weight: 700; letter-spacing: .12em; }
 
 nav button,
 .tabs button,
@@ -258,12 +261,31 @@ main {
 .strategy-update-grid article > strong { color: #e9f2fc; }
 .strategy-update-grid article > small { color: #8ea0b4; line-height: 1.5; }
 .strategy-update-grid article p { margin: 0; color: #b9c5d2; line-height: 1.5; }
+.strategy-metric-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
+.mini-metric { display: grid; gap: 5px; }
+.mini-metric span, .mini-metric small { color: #8ea0b4; }
+.mini-metric strong { font-size: 20px; }
+.stress-test-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.stress-result { display: grid; gap: 10px; padding: 14px; border: 1px solid #1d3044; border-radius: 12px; background: #081522; }
+.stress-result > div, .stress-result p { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.stress-result p { margin: 0; color: #8ea0b4; font-size: 13px; }
+.stress-result.pass { border-color: rgba(79, 208, 111, .35); }
+.stress-result.warning { border-color: rgba(255, 210, 74, .4); }
+.stress-result.danger { border-color: rgba(255, 82, 82, .4); }
 .record-hero { align-items: center; }
 .record-hero > button { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+.record-actions { display: flex; gap: 10px; }
+.record-actions button { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
 .record-stat-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.record-filter-bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.record-filter-bar label { display: flex; align-items: center; gap: 8px; color: #8ea0b4; }
+.record-filter-bar label:first-child { flex: 1; min-width: 240px; }
+.record-filter-bar input, .record-filter-bar select { min-height: 38px; padding: 0 11px; border: 1px solid #1d3044; border-radius: 8px; background: #081522; color: #e7edf6; }
+.record-filter-bar input { width: 100%; }
 .record-table th, .record-table td { white-space: nowrap; }
 .record-table td:last-child { max-width: 360px; white-space: normal; line-height: 1.45; }
-.table-scroll { overflow-x: auto; }
+.table-scroll { overflow-x: auto; scrollbar-color: #2f83ff #0a1726; }
+.table-scroll thead th { position: sticky; top: 0; z-index: 1; background: #0a1726; }
 .stock-table td small { display: block; margin-top: 3px; color: #77899d; }
 .compact-table { font-size: 13px; }
 .auto-bottom-grid { align-items: start; }
@@ -277,13 +299,18 @@ main {
   .auto-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .record-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .auto-main-grid { grid-template-columns: 1fr; }
+  .strategy-metric-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .stress-test-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 620px) {
   .auto-stat-grid { grid-template-columns: 1fr; }
   .record-stat-grid { grid-template-columns: 1fr; }
+  .strategy-metric-grid, .stress-test-grid { grid-template-columns: 1fr; }
   .auto-actions { width: 100%; }
   .auto-actions button { flex: 1; justify-content: center; }
+  .record-actions { width: 100%; }
+  .record-actions button { flex: 1; justify-content: center; }
 }
 
 .ranking {
