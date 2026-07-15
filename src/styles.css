@@ -239,6 +239,41 @@ main {
   color: #ff5252;
 }
 
+.autonomous-portfolio-page { gap: 18px; }
+.autonomous-hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding: 26px; border: 1px solid #1e3c58; border-radius: 18px; background: radial-gradient(circle at 15% 15%, rgba(47,131,255,.18), transparent 38%), #091523; }
+.autonomous-hero h1 { margin: 10px 0 6px; font-size: 32px; }
+.autonomous-hero p { max-width: 720px; margin: 0; color: #9cabbc; }
+.auto-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
+.auto-actions button { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+.auto-stat-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.auto-stat { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; align-items: center; }
+.auto-stat > svg { grid-row: 1 / span 3; color: #53a1ff; }
+.auto-stat span, .auto-stat small { color: #8ea0b4; }
+.auto-stat strong { font-size: 25px; }
+.auto-main-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(280px, .85fr); gap: 16px; }
+.auto-chart-card { min-width: 0; }
+.auto-rules ul { display: grid; gap: 11px; margin: 0; padding-left: 18px; color: #b9c5d2; line-height: 1.45; }
+.table-scroll { overflow-x: auto; }
+.stock-table td small { display: block; margin-top: 3px; color: #77899d; }
+.compact-table { font-size: 13px; }
+.auto-bottom-grid { align-items: start; }
+.auto-trade-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.auto-trade-list li { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 8px; align-items: center; padding: 11px 0; border-bottom: 1px solid #182b3d; }
+.auto-trade-list li small { grid-column: 2 / -1; color: #8293a5; }
+
+@media (max-width: 1000px) {
+  .autonomous-hero { align-items: flex-start; flex-direction: column; }
+  .auto-actions { justify-content: flex-start; }
+  .auto-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .auto-main-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 620px) {
+  .auto-stat-grid { grid-template-columns: 1fr; }
+  .auto-actions { width: 100%; }
+  .auto-actions button { flex: 1; justify-content: center; }
+}
+
 .ranking {
   max-width: 760px;
 }

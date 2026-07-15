@@ -54,7 +54,7 @@ const navItems: Array<{ id: Page; label: string; icon: typeof LayoutGrid }> = [
   { id: "historyReplay", label: "历史回放", icon: History },
   { id: "patternLab", label: "模式实验室", icon: FlaskConical },
   { id: "strategyLab", label: "策略实验室", icon: Beaker },
-  { id: "paperPortfolio", label: "虚拟组合", icon: Wallet },
+  { id: "paperPortfolio", label: "自主操盘", icon: Wallet },
   { id: "portfolioCommand", label: "组合指挥中心", icon: Gauge },
   { id: "alerts", label: "自定义提醒", icon: Bell },
 ];

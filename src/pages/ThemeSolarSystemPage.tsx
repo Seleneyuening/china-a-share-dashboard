@@ -42,8 +42,7 @@ export function ThemeSolarSystemPage() {
 }
 
 export function ThemeTop50Page() {
-  const { stocks, source: topVolumeSource, updatedAt } = useLiveStocks();
-  const topVolumeUpdatedAt = updatedAt ? new Date(updatedAt).toLocaleTimeString("en-US", { hour12: false }) : "";
+  const { stocks } = useLiveStocks();
   const top50 = useMemo(() => topVolumeService.getComparison(stocks), [stocks]);
   const comparisonBySymbol = useMemo(() => new Map(top50.rows.map((row) => [row.symbol, row])), [top50.rows]);
   const [activeSymbol, setActiveSymbol] = useState<string>();
@@ -54,8 +53,8 @@ export function ThemeTop50Page() {
         <div className="top50-main v2-card">
           <div className="v2-card-head">
             <div>
-              <h2>成交金额 Top 50 对比</h2>
-              <small>数据源：{topVolumeSource}{topVolumeUpdatedAt ? `，更新 ${topVolumeUpdatedAt}` : ""}；NEW / OUT 表示榜单变化。</small>
+              <h2>A 股模拟流动性 Top 50</h2>
+              <small>固定 50 只 A 股模拟股票池，按人民币成交额排序；本榜单只描述流动性，不代表系统买入优先级。</small>
             </div>
           </div>
           <div className="migration-layout">
@@ -66,7 +65,7 @@ export function ThemeTop50Page() {
         </div>
         <ChangeSummaryPanel summary={top50.summary} />
       </div>
-      <p className="mock-note">本页为 A 股模拟成交额与榜单变化演示，仅供信息展示，不构成任何投资建议。</p>
+      <p className="mock-note">自主选股请查看“自主操盘”页面；本页只用于核对 50 只股票的模拟成交额和排名变化。</p>
     </section>
   );
 }
