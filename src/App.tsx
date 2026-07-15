@@ -1,4 +1,4 @@
-import { Activity, BarChart3, Beaker, Bell, Eye, FlaskConical, Gauge, Globe2, History, LayoutGrid, LineChart as LineIcon, Moon, Newspaper, RefreshCw, SlidersHorizontal, Star, Sun, Wallet } from "lucide-react";
+import { Activity, BarChart3, Beaker, Bell, BookOpenText, Eye, FlaskConical, Gauge, Globe2, History, LayoutGrid, LineChart as LineIcon, Moon, Newspaper, RefreshCw, SlidersHorizontal, Star, Sun, Wallet } from "lucide-react";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import {
   Area,
@@ -32,6 +32,7 @@ import { PatternLabPage } from "./pages/PatternLabPage";
 import { StrategyLabPage } from "./pages/StrategyLabPage";
 import { PaperPortfolioPage } from "./pages/PaperPortfolioPage";
 import { PortfolioCommandPage } from "./pages/PortfolioCommandPage";
+import { PortfolioRecordPage } from "./pages/PortfolioRecordPage";
 import { ThemeSolarSystemPage, ThemeTop50Page } from "./pages/ThemeSolarSystemPage";
 import { marketDataService } from "./services/marketDataService";
 import { getMockSnapshot } from "./services/mockMarketSnapshot";
@@ -39,7 +40,7 @@ import { alertStorage } from "./services/alertStorage";
 import { bySymbol, calculateCorrelation, calculateRelativeStrength, calculateReturn, getMarketStatus, metaFor, normalizeSeriesToBase100, signed } from "./services/calculations";
 import type { IndexMeta, Point, RangeKey } from "./types";
 
-type Page = "marketJournal" | "overview" | "intraday" | "overlay" | "compare" | "monitoringGroups" | "themeSolarSystem" | "themeTop50" | "anomalyRadar" | "historyReplay" | "patternLab" | "strategyLab" | "paperPortfolio" | "portfolioCommand" | "alerts";
+type Page = "marketJournal" | "overview" | "intraday" | "overlay" | "compare" | "monitoringGroups" | "themeSolarSystem" | "themeTop50" | "anomalyRadar" | "historyReplay" | "patternLab" | "strategyLab" | "paperPortfolio" | "portfolioRecord" | "portfolioCommand" | "alerts";
 
 const navItems: Array<{ id: Page; label: string; icon: typeof LayoutGrid }> = [
   { id: "marketJournal", label: "市场日志", icon: Newspaper },
@@ -55,6 +56,7 @@ const navItems: Array<{ id: Page; label: string; icon: typeof LayoutGrid }> = [
   { id: "patternLab", label: "模式实验室", icon: FlaskConical },
   { id: "strategyLab", label: "策略实验室", icon: Beaker },
   { id: "paperPortfolio", label: "自主操盘", icon: Wallet },
+  { id: "portfolioRecord", label: "资金与交易记录", icon: BookOpenText },
   { id: "portfolioCommand", label: "组合指挥中心", icon: Gauge },
   { id: "alerts", label: "自定义提醒", icon: Bell },
 ];
@@ -187,6 +189,7 @@ function App() {
         {page === "patternLab" && <PatternLabPage />}
         {page === "strategyLab" && <StrategyLabPage />}
         {page === "paperPortfolio" && <PaperPortfolioPage />}
+        {page === "portfolioRecord" && <PortfolioRecordPage />}
         {page === "portfolioCommand" && <PortfolioCommandPage />}
         {page === "alerts" && <AlertsPage />}
 

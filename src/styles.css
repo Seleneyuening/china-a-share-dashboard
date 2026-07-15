@@ -258,6 +258,11 @@ main {
 .strategy-update-grid article > strong { color: #e9f2fc; }
 .strategy-update-grid article > small { color: #8ea0b4; line-height: 1.5; }
 .strategy-update-grid article p { margin: 0; color: #b9c5d2; line-height: 1.5; }
+.record-hero { align-items: center; }
+.record-hero > button { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+.record-stat-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.record-table th, .record-table td { white-space: nowrap; }
+.record-table td:last-child { max-width: 360px; white-space: normal; line-height: 1.45; }
 .table-scroll { overflow-x: auto; }
 .stock-table td small { display: block; margin-top: 3px; color: #77899d; }
 .compact-table { font-size: 13px; }
@@ -270,11 +275,13 @@ main {
   .autonomous-hero { align-items: flex-start; flex-direction: column; }
   .auto-actions { justify-content: flex-start; }
   .auto-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .record-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .auto-main-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 620px) {
   .auto-stat-grid { grid-template-columns: 1fr; }
+  .record-stat-grid { grid-template-columns: 1fr; }
   .auto-actions { width: 100%; }
   .auto-actions button { flex: 1; justify-content: center; }
 }
