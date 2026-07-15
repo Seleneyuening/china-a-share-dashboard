@@ -253,6 +253,11 @@ main {
 .auto-main-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(280px, .85fr); gap: 16px; }
 .auto-chart-card { min-width: 0; }
 .auto-rules ul { display: grid; gap: 11px; margin: 0; padding-left: 18px; color: #b9c5d2; line-height: 1.45; }
+.strategy-update-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.strategy-update-grid article { display: grid; gap: 8px; padding: 14px; border: 1px solid #1d3044; border-radius: 12px; background: #081522; }
+.strategy-update-grid article > strong { color: #e9f2fc; }
+.strategy-update-grid article > small { color: #8ea0b4; line-height: 1.5; }
+.strategy-update-grid article p { margin: 0; color: #b9c5d2; line-height: 1.5; }
 .table-scroll { overflow-x: auto; }
 .stock-table td small { display: block; margin-top: 3px; color: #77899d; }
 .compact-table { font-size: 13px; }
