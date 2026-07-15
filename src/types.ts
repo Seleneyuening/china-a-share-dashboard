@@ -55,6 +55,6 @@ export type MarketDataSnapshot = {
   quotes: Quote[];
   intraday: Record<string, Point[]>;
   historical: Record<string, Point[]>;
-  source: "mock";
+  source: "mock" | "yahoo";
   fetchedAt: string;
 };

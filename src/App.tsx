@@ -35,7 +35,7 @@ import { PortfolioCommandPage } from "./pages/PortfolioCommandPage";
 import { PortfolioRecordPage } from "./pages/PortfolioRecordPage";
 import { ThemeSolarSystemPage, ThemeTop50Page } from "./pages/ThemeSolarSystemPage";
 import { marketDataService } from "./services/marketDataService";
-import { getMockSnapshot } from "./services/mockMarketSnapshot";
+import { getYahooSnapshot } from "./services/yahooFinanceService";
 import { alertStorage } from "./services/alertStorage";
 import { bySymbol, calculateCorrelation, calculateRelativeStrength, calculateReturn, getMarketStatus, metaFor, normalizeSeriesToBase100, signed } from "./services/calculations";
 import type { IndexMeta, Point, RangeKey } from "./types";
@@ -87,7 +87,7 @@ function App() {
   const [showPrevClose, setShowPrevClose] = useState(true);
   const [visibleSymbols, setVisibleSymbols] = useState(() => new Set(comparisonSymbols));
   const [rankMode, setRankMode] = useState<"gain" | "loss">("gain");
-  const [refreshedAt, setRefreshedAt] = useState("15:42:30");
+  const [refreshedAt, setRefreshedAt] = useState("正在更新");
   const [triggeredAlertCount, setTriggeredAlertCount] = useState(() => alertStorage.getActiveRuleIds().length);
   activeSnapshot = snapshot;
   quoteBySymbol = bySymbol(snapshot.quotes);
@@ -95,11 +95,11 @@ function App() {
 
   async function refreshMarketData() {
     try {
-      const next = await getMockSnapshot();
+      const next = await getYahooSnapshot();
       setSnapshot(next);
-      setRefreshedAt("15:00:00");
+      setRefreshedAt(new Date(next.fetchedAt).toLocaleTimeString("zh-CN", { hour12: false, timeZone: "Asia/Shanghai" }));
     } catch {
-      // keep showing the last successful snapshot
+      setRefreshedAt("更新失败");
     }
   }
 
@@ -137,7 +137,7 @@ function App() {
           <Globe2 size={34} />
           <div>
             <strong>A 股市场看板</strong>
-            <span>沪深市场模拟监控</span>
+            <span>沪深指数实时监控</span>
           </div>
         </div>
         <nav>
