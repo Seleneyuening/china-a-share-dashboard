@@ -23,7 +23,7 @@ export function RankMigrationChart({ rows, activeSymbol, onHover, showAll }: { r
         const change = row.rankChange || 0;
         const important = biggest.has(row.symbol);
         const active = activeSymbol === row.symbol;
-        const color = change > 0 ? "#18d49a" : change < 0 ? "#ff6a45" : "#7f8ca0";
+        const color = change > 0 ? "#ff6f82" : change < 0 ? "#4dcf9a" : "#718196";
         const opacity = active ? 1 : important ? 0.68 : 0.12;
         const startY = y(row.previousRank!);
         const endY = y(row.currentRank!);

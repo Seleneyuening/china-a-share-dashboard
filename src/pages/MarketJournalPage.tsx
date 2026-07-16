@@ -43,7 +43,7 @@ function RankSparkline({ ranks }: { ranks: (number | null)[] }) {
     <ResponsiveContainer width={110} height={32}>
       <LineChart data={data}>
         <YAxis hide reversed domain={[1, maxRank]} />
-        <Line type="monotone" dataKey="rank" stroke="#2f83ff" strokeWidth={2} dot={false} connectNulls />
+        <Line type="monotone" dataKey="rank" stroke="#f487a3" strokeWidth={2} dot={false} connectNulls />
       </LineChart>
     </ResponsiveContainer>
   );
@@ -292,7 +292,7 @@ export function MarketJournalPage() {
                             value={noteDrafts[entry.date] ?? entry.note}
                             onChange={(event) => setNoteDrafts((current) => ({ ...current, [entry.date]: event.target.value }))}
                           />
-                          <button className="ghost-button" onClick={() => saveNote(entry.date)}>保存备注</button>
+                          <button className="ghost-button" onClick={() => saveNote(entry.date)}>保存今日复盘</button>
                         </div>
                       )}
                     </li>

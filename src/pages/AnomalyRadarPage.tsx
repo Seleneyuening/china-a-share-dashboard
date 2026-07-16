@@ -20,7 +20,7 @@ import type { AnomalyRow, AnomalyType } from "../types/anomaly";
 import type { DailySnapshotRow } from "../types/snapshotHistory";
 import { formatCompactMoney, formatSignedPct } from "../utils/format";
 
-const baseGrid = { stroke: "#1d3044", strokeDasharray: "3 3" };
+const baseGrid = { stroke: "#203345", strokeDasharray: "3 3" };
 
 type FilterTab = "all" | "new_exit" | "volume" | "rank" | "price";
 
@@ -252,9 +252,9 @@ export function AnomalyRadarPage() {
           <ResponsiveContainer width="100%" height={360}>
             <LineChart data={rotation.data}>
               <CartesianGrid {...baseGrid} />
-              <XAxis dataKey="date" stroke="#8ea0b4" />
-              <YAxis stroke="#8ea0b4" reversed domain={[1, rotation.lines.length]} allowDecimals={false} />
-              <Tooltip contentStyle={{ background: "#091523", border: "1px solid #1d3044" }} />
+              <XAxis dataKey="date" stroke="#8494a8" />
+              <YAxis stroke="#8494a8" reversed domain={[1, rotation.lines.length]} allowDecimals={false} />
+              <Tooltip contentStyle={{ background: "#0b1a28", border: "1px solid #263b4c", borderRadius: 8 }} />
               <Legend />
               {rotation.lines.map((line) => (
                 <Line key={line.id} type="monotone" dataKey={line.id} name={line.name} stroke={line.color} strokeWidth={2} />

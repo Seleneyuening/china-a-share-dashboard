@@ -13,7 +13,7 @@ export function MarketSatellitesPanel() {
             <small>{stock.companyName}</small>
             <em>¥{stock.price.toFixed(2)} <i className={stock.changePct >= 0 ? "positive" : "negative"}>{formatSignedPct(stock.changePct)}</i></em>
           </div>
-          <svg viewBox="0 0 86 32">{stock.sparkline.map((value, index) => index ? null : null)}<polyline points={stock.sparkline.map((value, index) => `${(index / (stock.sparkline.length - 1)) * 86},${30 - ((value - Math.min(...stock.sparkline)) / Math.max(Math.max(...stock.sparkline) - Math.min(...stock.sparkline), 1)) * 26}`).join(" ")} fill="none" stroke={stock.changePct >= 0 ? "#20d17d" : "#ff594f"} strokeWidth="2" /></svg>
+          <svg viewBox="0 0 86 32">{stock.sparkline.map((value, index) => index ? null : null)}<polyline points={stock.sparkline.map((value, index) => `${(index / (stock.sparkline.length - 1)) * 86},${30 - ((value - Math.min(...stock.sparkline)) / Math.max(Math.max(...stock.sparkline) - Math.min(...stock.sparkline), 1)) * 26}`).join(" ")} fill="none" stroke={stock.changePct >= 0 ? "#ff6f82" : "#4dcf9a"} strokeWidth="2" /></svg>
         </div>
       ))}
     </aside>

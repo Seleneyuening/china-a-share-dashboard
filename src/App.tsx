@@ -1,4 +1,4 @@
-import { Activity, Bell, Eye, FlaskConical, Globe2, History, LayoutGrid, LineChart as LineIcon, Moon, RefreshCw, Sun, Wallet } from "lucide-react";
+import { Activity, Bell, Eye, FlaskConical, Flower2, History, LayoutGrid, LineChart as LineIcon, Moon, RefreshCw, Sun, Wallet } from "lucide-react";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import {
   Area,
@@ -68,7 +68,11 @@ const refreshIntervalMs = 2 * 60 * 1000;
 let activeSnapshot = marketDataService.getSnapshot();
 let quoteBySymbol = bySymbol(marketDataService.getLatestQuotes(activeSnapshot));
 const marketById = Object.fromEntries(markets.map((market) => [market.id, market]));
-const baseGrid = { stroke: "#1d3044", strokeDasharray: "3 3" };
+const baseGrid = { stroke: "#203345", strokeDasharray: "3 3" };
+const chartAxis = "#8494a8";
+const tooltipStyle = { background: "#0b1a28", border: "1px solid #263b4c", borderRadius: 8, color: "#edf2f7" };
+const gainColor = "#ff6f82";
+const lossColor = "#4dcf9a";
 
 const requestedPage = new URLSearchParams(window.location.search).get("page");
 const pageAliases: Record<string, Page> = {
@@ -169,10 +173,10 @@ function App() {
   const pageTitle = page === "alerts" ? "自定义提醒" : navItems.find((item) => item.id === page)?.label || "总览";
 
   return (
-    <div className="app">
+    <div className="app night-sakura">
       <aside className="sidebar">
         <div className="brand">
-          <Globe2 size={34} />
+          <Flower2 size={34} />
           <div>
             <strong>A 股市场看板</strong>
             <span>沪深指数实时监控</span>
@@ -286,7 +290,7 @@ function Overview({ rankMode, setRankMode, openIntraday }: { rankMode: "gain" | 
               </div>
               <strong>{formatNumber(quote.value)}</strong>
               <div className={quote.changePct >= 0 ? "positive" : "negative"}>{signed(quote.change)}　{signed(quote.changePct)}%</div>
-              <MiniLine data={marketDataService.getIntradaySeries(symbol, activeSnapshot)} color={quote.changePct >= 0 ? "#4fd06f" : "#ff5252"} />
+              <MiniLine data={marketDataService.getIntradaySeries(symbol, activeSnapshot)} color={quote.changePct >= 0 ? gainColor : lossColor} />
               <small>{quote.updatedAt}</small>
             </button>
           );
@@ -347,9 +351,6 @@ function Intraday({ selectedSymbol, setSelectedSymbol, showPrevClose, setShowPre
   const pctValues = chartData.map((point) => point.pctFromPrevClose);
   const maxAbsPct = Math.max(0.2, ...pctValues.map(Math.abs));
   const pctDomain = [Number((-maxAbsPct * 1.15).toFixed(2)), Number((maxAbsPct * 1.15).toFixed(2))];
-  const dataMax = Math.max(...pctValues);
-  const dataMin = Math.min(...pctValues);
-  const zeroOffset = dataMax <= 0 ? 0 : dataMin >= 0 ? 1 : dataMax / (dataMax - dataMin);
   return (
     <section className="stack">
       <div className="tabs wrap">
@@ -375,24 +376,18 @@ function Intraday({ selectedSymbol, setSelectedSymbol, showPrevClose, setShowPre
         </div>
         <ResponsiveContainer width="100%" height={420}>
           <AreaChart data={chartData}>
-            <defs>
-              <linearGradient id="intradaySplit" x1="0" y1="0" x2="0" y2="1">
-                <stop offset={zeroOffset} stopColor="#4fd06f" />
-                <stop offset={zeroOffset} stopColor="#ff5252" />
-              </linearGradient>
-            </defs>
             <CartesianGrid {...baseGrid} />
-            <XAxis dataKey="time" stroke="#8ea0b4" />
-            <YAxis orientation="right" stroke="#8ea0b4" domain={pctDomain} tickFormatter={(value) => `${Number(value).toFixed(2)}%`} />
+            <XAxis dataKey="time" stroke={chartAxis} />
+            <YAxis orientation="right" stroke={chartAxis} domain={pctDomain} tickFormatter={(value) => `${Number(value).toFixed(2)}%`} />
             <Tooltip
-              contentStyle={{ background: "#091523", border: "1px solid #1d3044" }}
+              contentStyle={tooltipStyle}
               formatter={(value, name, item) => {
                 const pointValue = Number(item.payload.value);
                 return [`${Number(item.payload.pctFromPrevClose).toFixed(2)}% / ${formatNumber(pointValue)}`, name];
               }}
             />
-            {showPrevClose && <ReferenceLine y={0} stroke="#9aa6b2" strokeDasharray="4 4" label={{ value: "昨收 0%", fill: "#9aa6b2", position: "right" }} />}
-            <Area type="monotone" dataKey="pctFromPrevClose" stroke="url(#intradaySplit)" fill="url(#intradaySplit)" fillOpacity={0.16} strokeWidth={2} name={meta.name} />
+            {showPrevClose && <ReferenceLine y={0} stroke="#718196" strokeDasharray="4 4" label={{ value: "昨收 0%", fill: "#8494a8", position: "right" }} />}
+            <Area type="monotone" dataKey="pctFromPrevClose" stroke={gainColor} fill={gainColor} fillOpacity={0.08} strokeWidth={2} name={meta.name} />
           </AreaChart>
         </ResponsiveContainer>
       </div>
@@ -440,9 +435,9 @@ function Overlay({ range, setRange, visibleSymbols, toggleVisible, snapshotSourc
           <ResponsiveContainer width="100%" height={440}>
             <LineChart data={data}>
               <CartesianGrid {...baseGrid} />
-              <XAxis dataKey="time" stroke="#8ea0b4" minTickGap={26} />
-              <YAxis stroke="#8ea0b4" domain={[80, 125]} />
-              <Tooltip contentStyle={{ background: "#091523", border: "1px solid #1d3044" }} />
+              <XAxis dataKey="time" stroke={chartAxis} minTickGap={26} />
+              <YAxis stroke={chartAxis} domain={[80, 125]} />
+              <Tooltip contentStyle={tooltipStyle} />
               {comparisonSymbols.map((symbol) => visibleSymbols.has(symbol) && <Line key={symbol} type="basis" dataKey={symbol} stroke={metaFor(symbol, indexes).color} dot={false} strokeWidth={2} />)}
             </LineChart>
           </ResponsiveContainer>
@@ -514,11 +509,11 @@ function CorrelationMatrix() {
 }
 
 function Compare() {
-  const barData = comparisonSymbols.map((symbol) => ({ name: metaFor(symbol, indexes).name, value: quoteBySymbol[symbol].changePct, color: quoteBySymbol[symbol].changePct >= 0 ? "#4fd06f" : "#ff5252" }));
+  const barData = comparisonSymbols.map((symbol) => ({ name: metaFor(symbol, indexes).name, value: quoteBySymbol[symbol].changePct, color: quoteBySymbol[symbol].changePct >= 0 ? gainColor : lossColor }));
   const base = marketDataService.getHistoricalSeries("000001.SH", "1M", activeSnapshot);
   const strength = comparisonSymbols.filter((s) => s !== "000001.SH").map((symbol) => ({ name: metaFor(symbol, indexes).name, value: calculateRelativeStrength(base, marketDataService.getHistoricalSeries(symbol, "1M", activeSnapshot)) }));
   const radar = comparisonSymbols.slice(0, 6).map((symbol) => ({ market: metaFor(symbol, indexes).name, 涨跌幅: Math.max(10, quoteBySymbol[symbol].changePct * 22 + 50), 波动率: 70 - Math.abs(quoteBySymbol[symbol].changePct) * 8, 相对强弱: 50 + calculateRelativeStrength(base, marketDataService.getHistoricalSeries(symbol, "1M", activeSnapshot)) * 4 }));
-  const pie = [{ name: "同向", value: 4, fill: "#4fd06f" }, { name: "反向", value: 2, fill: "#ff5252" }, { name: "弱相关", value: 1, fill: "#748094" }];
+  const pie = [{ name: "同向", value: 4, fill: gainColor }, { name: "反向", value: 2, fill: lossColor }, { name: "弱相关", value: 1, fill: "#718196" }];
   return (
     <section className="stack">
       <div className="tabs wrap"><button className="active">市场总览</button><button>涨跌对比</button><button>相关性分析</button><button>强弱对比</button><button>波动率对比</button><button>资金与汇率影响</button></div>
@@ -528,9 +523,9 @@ function Compare() {
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={barData}>
               <CartesianGrid {...baseGrid} />
-              <XAxis dataKey="name" stroke="#8ea0b4" />
-              <YAxis stroke="#8ea0b4" />
-              <Tooltip contentStyle={{ background: "#091523", border: "1px solid #1d3044" }} />
+              <XAxis dataKey="name" stroke={chartAxis} />
+              <YAxis stroke={chartAxis} />
+              <Tooltip contentStyle={tooltipStyle} />
               <Bar dataKey="value">{barData.map((entry) => <Cell key={entry.name} fill={entry.color} />)}</Bar>
             </BarChart>
           </ResponsiveContainer>
@@ -540,10 +535,10 @@ function Compare() {
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={strength} layout="vertical">
               <CartesianGrid {...baseGrid} />
-              <XAxis type="number" stroke="#8ea0b4" />
-              <YAxis type="category" dataKey="name" stroke="#8ea0b4" width={90} />
-              <Tooltip contentStyle={{ background: "#091523", border: "1px solid #1d3044" }} />
-              <Bar dataKey="value" fill="#4fd06f" />
+              <XAxis type="number" stroke={chartAxis} />
+              <YAxis type="category" dataKey="name" stroke={chartAxis} width={90} />
+              <Tooltip contentStyle={tooltipStyle} />
+              <Bar dataKey="value" fill="#f487a3" />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -552,7 +547,7 @@ function Compare() {
         <div className="panel">
           <h2>市场趋势一致性</h2>
           <ResponsiveContainer width="100%" height={240}>
-            <PieChart><Pie data={pie} dataKey="value" innerRadius={58} outerRadius={92} paddingAngle={3}>{pie.map((entry) => <Cell key={entry.name} fill={entry.fill} />)}</Pie><Tooltip contentStyle={{ background: "#091523", border: "1px solid #1d3044" }} /><Legend /></PieChart>
+            <PieChart><Pie data={pie} dataKey="value" innerRadius={58} outerRadius={92} paddingAngle={3}>{pie.map((entry) => <Cell key={entry.name} fill={entry.fill} />)}</Pie><Tooltip contentStyle={tooltipStyle} /><Legend /></PieChart>
           </ResponsiveContainer>
           <strong className="score">市等偏强 62%</strong>
         </div>
@@ -560,12 +555,12 @@ function Compare() {
           <h2>市场分化雷达图</h2>
           <ResponsiveContainer width="100%" height={260}>
             <RadarChart data={radar}>
-              <PolarGrid stroke="#1d3044" />
-              <PolarAngleAxis dataKey="market" stroke="#8ea0b4" />
-              <Radar dataKey="涨跌幅" stroke="#2f83ff" fill="#2f83ff" fillOpacity={0.2} />
-              <Radar dataKey="波动率" stroke="#ffd24a" fill="#ffd24a" fillOpacity={0.12} />
-              <Radar dataKey="相对强弱" stroke="#4fd06f" fill="#4fd06f" fillOpacity={0.12} />
-              <Tooltip contentStyle={{ background: "#091523", border: "1px solid #1d3044" }} />
+              <PolarGrid stroke="#203345" />
+              <PolarAngleAxis dataKey="market" stroke={chartAxis} />
+              <Radar dataKey="涨跌幅" stroke="#f487a3" fill="#f487a3" fillOpacity={0.16} />
+              <Radar dataKey="波动率" stroke="#e4b260" fill="#e4b260" fillOpacity={0.1} />
+              <Radar dataKey="相对强弱" stroke="#4dcf9a" fill="#4dcf9a" fillOpacity={0.1} />
+              <Tooltip contentStyle={tooltipStyle} />
               <Legend />
             </RadarChart>
           </ResponsiveContainer>
@@ -602,7 +597,7 @@ function SummaryCards() {
     <div className="summary-cards">
       {cards.map(([title, symbolName, value, text], index) => {
         const symbol = ["000688.SH", "399006.SZ", "000001.SH", "000905.SH", "000300.SH"][index];
-        return <div className="panel summary" key={title}><h3>{title}</h3><b className={value.startsWith("+") ? "positive" : "negative"}>{symbolName} {value}</b><MiniLine data={marketDataService.getHistoricalSeries(symbol, "1M", activeSnapshot)} color={value.startsWith("+") ? "#4fd06f" : "#ff5252"} /><p>{text}</p></div>;
+        return <div className="panel summary" key={title}><h3>{title}</h3><b className={value.startsWith("+") ? "positive" : "negative"}>{symbolName} {value}</b><MiniLine data={marketDataService.getHistoricalSeries(symbol, "1M", activeSnapshot)} color={value.startsWith("+") ? gainColor : lossColor} /><p>{text}</p></div>;
       })}
     </div>
   );

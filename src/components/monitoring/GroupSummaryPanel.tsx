@@ -23,9 +23,9 @@ export function GroupSummaryPanel({ summary }: { summary: ThemeGroupSummary }) {
       <ResponsiveContainer width="100%" height={150}>
         <BarChart data={top3} layout="vertical">
           <XAxis type="number" hide />
-          <YAxis type="category" dataKey="name" width={54} stroke="#9cabbc" />
-          <Tooltip contentStyle={{ background: "#091523", border: "1px solid #1d3044" }} formatter={(value) => [`¥${value}亿`, "成交额"]} />
-          <Bar dataKey="value" fill="#25d18c" radius={[0, 4, 4, 0]} />
+          <YAxis type="category" dataKey="name" width={54} stroke="#8494a8" />
+          <Tooltip contentStyle={{ background: "#0b1a28", border: "1px solid #263b4c", borderRadius: 8 }} formatter={(value) => [`¥${value}亿`, "成交额"]} />
+          <Bar dataKey="value" fill="#f487a3" radius={[0, 4, 4, 0]} />
         </BarChart>
       </ResponsiveContainer>
       <h3>领涨 / 领跌</h3>
