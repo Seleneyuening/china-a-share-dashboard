@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronRight, Flame, ListFilter, Pencil, RefreshCw, Save, Settings2, Star } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronRight, Flame, ListFilter, RefreshCw, Save, Settings2, Star } from "lucide-react";
 import { StockQuickDrawer } from "../components/monitoring/StockQuickDrawer";
 import { StockStatusBadge } from "../components/monitoring/StockStatusBadge";
 import { useLiveStocks } from "../hooks/useLiveStocks";
@@ -11,6 +11,8 @@ import type { StockQuoteMock, ThemeGroupSummary } from "../types/themeGroup";
 import { formatCompactMoney, formatSignedPct } from "../utils/format";
 
 type ObservationTier = "必须关注" | "持续观察" | "暂时降温";
+type SortKey = "symbol" | "changePct" | "dollarVolume" | "heat" | "rank";
+type SortDirection = "asc" | "desc";
 
 function tierFor(summary: ThemeGroupSummary): ObservationTier {
   const heat = summary.dollarVolume / Math.max(summary.previousDollarVolume, 1);
@@ -48,6 +50,7 @@ export function MonitoringGroupsPage() {
   const [selectedId, setSelectedId] = useState<string>(() => summaries[0]?.group.id || "");
   const [selectedStock, setSelectedStock] = useState<StockQuoteMock>();
   const [focusOnly, setFocusOnly] = useState(false);
+  const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection }>({ key: "changePct", direction: "desc" });
   const [savedAt, setSavedAt] = useState("尚未保存");
   const [notes, setNotes] = useState<Record<string, string>>(() => {
     try { return JSON.parse(window.localStorage.getItem("china-a-share-watchbook-notes-v1") || "{}"); } catch { return {}; }
@@ -97,6 +100,17 @@ export function MonitoringGroupsPage() {
   const selectedHistory = useMemo(() => watchbookSnapshotStorage.getGroupHistory(selected.group.id, 5), [selected.group.id, snapshotRevision]);
   const dataStatus = loading ? "行情更新中" : error ? `${source} · ${error}` : `${source} · 已更新`;
 
+  function toggleSort(key: SortKey) {
+    setSortConfig((current) => current.key === key
+      ? { key, direction: current.direction === "desc" ? "asc" : "desc" }
+      : { key, direction: key === "symbol" || key === "rank" ? "asc" : "desc" });
+  }
+
+  function sortHeader(label: string, key: SortKey) {
+    const active = sortConfig.key === key;
+    return <button type="button" className={active ? "active" : ""} onClick={() => toggleSort(key)} aria-label={`${label}，点击排序`}>{label}{active ? sortConfig.direction === "desc" ? <ArrowDown size={13} /> : <ArrowUp size={13} /> : null}</button>;
+  }
+
   return (
     <section className="watchbook-page">
       <header className="watchbook-heading">
@@ -122,14 +136,32 @@ export function MonitoringGroupsPage() {
         </aside>
 
         <main className="watchbook-center">
-          <div className="watchbook-panel-head"><div><h2>今日观察清单</h2><small>按照信号强度与量价状态自动整理</small></div><button><ListFilter size={15} /> 排序设置</button></div>
+          <div className="watchbook-panel-head"><div><h2>今日观察清单</h2><small>点击带箭头的表头即可排序</small></div><button onClick={() => setSortConfig({ key: "changePct", direction: "desc" })}><ListFilter size={15} /> 恢复默认排序</button></div>
           {(["必须关注", "持续观察", "暂时降温"] as ObservationTier[]).map((tier) => {
             const rows = visibleObservations.filter((item) => item.tier === tier);
             if (!rows.length) return null;
+            const sortedRows = [...rows].sort((a, b) => {
+              if (sortConfig.key === "symbol") {
+                const value = a.stock.symbol.localeCompare(b.stock.symbol);
+                return sortConfig.direction === "asc" ? value : -value;
+              }
+              if (sortConfig.key === "rank") {
+                const aRank = a.topRow?.currentRank;
+                const bRank = b.topRow?.currentRank;
+                if (aRank == null && bRank != null) return 1;
+                if (aRank != null && bRank == null) return -1;
+                const value = (aRank || 0) - (bRank || 0);
+                return sortConfig.direction === "asc" ? value : -value;
+              }
+              const aValue = sortConfig.key === "changePct" ? a.stock.changePct : sortConfig.key === "dollarVolume" ? (a.stock.dollarVolume ?? calculateDollarVolume(a.stock.price, a.stock.volume)) : a.heat.ratio;
+              const bValue = sortConfig.key === "changePct" ? b.stock.changePct : sortConfig.key === "dollarVolume" ? (b.stock.dollarVolume ?? calculateDollarVolume(b.stock.price, b.stock.volume)) : b.heat.ratio;
+              const value = aValue - bValue;
+              return sortConfig.direction === "asc" ? value : -value;
+            });
             return <section className={`watchbook-tier tier-${tier}`} key={tier}>
               <header><i /><h3>{tier}（{rows.length}）</h3><span>{tier === "必须关注" ? "信号最强，短线资金活跃" : tier === "持续观察" ? "趋势尚好，等待确认" : "热度回落，短期观望"}</span></header>
-              <div className="watchbook-table-head"><span>标的</span><span>关注理由</span><span>今日 / 昨日涨跌</span><span>成交额</span><span>热度比例</span><span>自选池排名</span><span>状态</span><span>观察备注</span></div>
-              {rows.map(({ summary, stock, reason, heat, topRow }) => <div className="watchbook-row" role="button" tabIndex={0} key={summary.group.id} onClick={() => { setSelectedId(summary.group.id); setSelectedStock(stock); }} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { setSelectedId(summary.group.id); setSelectedStock(stock); } }}>
+              <div className="watchbook-table-head"><span>{sortHeader("标的", "symbol")}</span><span>关注理由</span><span>{sortHeader("今日 / 昨日涨跌", "changePct")}</span><span>{sortHeader("成交额", "dollarVolume")}</span><span>{sortHeader("热度比例", "heat")}</span><span>{sortHeader("自选池排名", "rank")}</span><span>状态</span></div>
+              {sortedRows.map(({ summary, stock, reason, heat, topRow }) => <div className="watchbook-row" role="button" tabIndex={0} key={summary.group.id} onClick={() => { setSelectedId(summary.group.id); setSelectedStock(stock); }} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { setSelectedId(summary.group.id); setSelectedStock(stock); } }}>
                 <span className="watchbook-target"><Star size={14} /><b>{stock.symbol}</b><small>{stock.companyName}</small></span>
                 <span>{reason}</span>
                 <span><b className={stock.changePct >= 0 ? "positive" : "negative"}>{formatSignedPct(stock.changePct)}</b><small className={stock.previousChangePct >= 0 ? "positive" : "negative"}>{formatSignedPct(stock.previousChangePct)}</small></span>
@@ -137,7 +169,6 @@ export function MonitoringGroupsPage() {
                 <span className={heat.ratio >= 1 ? "positive" : "negative"}>{heat.ratio.toFixed(2)}x</span>
                 <span>{topRow?.currentRank ? `#${topRow.currentRank}` : "—"}<small className={(topRow?.rankChange || 0) >= 0 ? "positive" : "negative"}>{topRow?.rankChange ? signed(topRow.rankChange, 0) : "—"}</small></span>
                 <span><StockStatusBadge stock={stock} top50Rank={topRow?.currentRank} /></span>
-                <span className="watchbook-note" onClick={(event) => event.stopPropagation()}><input value={notes[summary.group.id] || ""} onChange={(event) => setNotes((current) => ({ ...current, [summary.group.id]: event.target.value }))} placeholder={tier === "必须关注" ? "关注放量延续性" : tier === "持续观察" ? "留意量能变化" : "等待资金回流"} /><Pencil size={13} /></span>
               </div>)}
             </section>;
           })}
