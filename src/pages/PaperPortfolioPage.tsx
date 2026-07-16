@@ -100,8 +100,8 @@ export function PaperPortfolioPage() {
             <div><span>当日风险信号</span><strong>0</strong><small className="positive">无</small></div>
           </div>
           <div className="paper-rules-box">
-            <strong>低占用运行规则</strong>
-            <p>行情只在内存筛选 · 盘中仅跟踪持仓与候选池 · 仅记录账户、持仓、成交及压缩快照。</p>
+            <strong>全自动虚拟交易</strong>
+            <p>25 只核心股票 + 50 只动态候选 · 10 只行业 ETF 判断市场风向 · 自动买入、卖出与调整参数，无需人工确认。</p>
           </div>
           <button className="paper-primary-action"><Sparkles size={16} /> 查看今日策略</button>
           <button className="paper-secondary-action"><Bot size={16} /> 策略助手</button>
@@ -117,7 +117,7 @@ export function PaperPortfolioPage() {
               const pnl = value - position.quantity * position.averagePrice;
               const pnlPct = (position.lastPrice / position.averagePrice - 1) * 100;
               return <tr key={position.symbol}><td>{position.symbol}</td><td><b>{position.companyName}</b></td><td>{position.quantity} / {position.quantity}</td><td>{position.lastPrice.toFixed(2)}</td><td>{position.averagePrice.toFixed(2)}</td><td>{money(value)}</td><td className={pnl >= 0 ? "positive" : "negative"}>{pnl >= 0 ? "+" : ""}{money(pnl)}</td><td className={pnlPct >= 0 ? "positive" : "negative"}>{formatSignedPct(pnlPct)}</td><td>{state.equity ? (value / state.equity * 100).toFixed(2) : "0.00"}%</td></tr>;
-            }) : <tr className="paper-empty-row"><td colSpan={9}>等待操盘引擎在交易时段生成第一笔虚拟持仓</td></tr>}
+            }) : <tr className="paper-empty-row"><td colSpan={9}>全自动操盘引擎将在下一交易时段寻找第一笔虚拟持仓</td></tr>}
           </tbody></table></div>
           <button className="paper-text-link">查看全部持仓 <ChevronRight size={14} /></button>
         </article>
@@ -132,7 +132,7 @@ export function PaperPortfolioPage() {
         </article>
       </div>
 
-      <p className="mock-note">虚拟交易仅用于模拟与研究，不连接券商、不构成投资建议，也不保证盈利。</p>
+      <p className="mock-note">系统只操作虚拟账户，不连接券商；买卖与策略调整自动执行，仅用于模拟研究，不构成投资建议，也不保证盈利。</p>
     </section>
   );
 }
