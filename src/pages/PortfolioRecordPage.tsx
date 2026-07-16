@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Banknote, BookOpenText, Download, RefreshCw, Search, TrendingUp, WalletCards } from "lucide-react";
-import { emptyPortfolioState, loadPortfolioState, type AppwritePortfolioState, type LiveTrade } from "../services/appwritePortfolioService";
+import { emptyPortfolioState, loadPortfolioState, type SupabasePortfolioState, type LiveTrade } from "../services/supabasePortfolioService";
 import { formatCompactMoney, formatSignedPct } from "../utils/format";
 
 function formatMoney(value: number) {
@@ -29,7 +29,7 @@ function buildClosedRecords(trades: LiveTrade[]): ClosedRecord[] {
 }
 
 export function PortfolioRecordPage() {
-  const [state, setState] = useState<AppwritePortfolioState>(() => emptyPortfolioState());
+  const [state, setState] = useState<SupabasePortfolioState>(() => emptyPortfolioState());
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [tradeSide, setTradeSide] = useState<"全部" | "买入" | "卖出">("全部");
@@ -55,7 +55,7 @@ export function PortfolioRecordPage() {
   }
 
   return <section className="v2-page portfolio-record-page">
-    <div className="v2-hero record-hero"><div><span className="tag green"><BookOpenText size={14} /> Appwrite 虚拟账户</span><h1>资金与交易记录</h1><p>记录真实时间下的虚拟资金、持仓、成交数量、金额、费用和盈亏，不再使用模拟交易日。</p></div><div className="record-actions"><button className="ghost-button" onClick={exportTrades}><Download size={16} /> 导出记录</button><button className="status" disabled={loading} onClick={() => void refresh()}><RefreshCw size={16} /> {loading ? "读取中" : "刷新记录"}</button></div></div>
+    <div className="v2-hero record-hero"><div><span className="tag green"><BookOpenText size={14} /> Supabase 虚拟账户</span><h1>资金与交易记录</h1><p>记录真实时间下的虚拟资金、持仓、成交数量、金额、费用和盈亏，不再使用模拟交易日。</p></div><div className="record-actions"><button className="ghost-button" onClick={exportTrades}><Download size={16} /> 导出记录</button><button className="status" disabled={loading} onClick={() => void refresh()}><RefreshCw size={16} /> {loading ? "读取中" : "刷新记录"}</button></div></div>
 
     <div className="v2-card record-filter-bar"><label><Search size={16} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索股票代码或名称" /></label><label><span>资金流水</span><select value={tradeSide} onChange={(event) => setTradeSide(event.target.value as typeof tradeSide)}><option>全部</option><option>买入</option><option>卖出</option></select></label></div>
 

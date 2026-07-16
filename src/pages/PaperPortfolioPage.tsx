@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Bot, Clock3, RefreshCw, ShieldCheck, TrendingUp, Wallet } from "lucide-react";
 import { Area, CartesianGrid, ComposedChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { emptyPortfolioState, loadPortfolioState, type AppwritePortfolioState } from "../services/appwritePortfolioService";
+import { emptyPortfolioState, loadPortfolioState, type SupabasePortfolioState } from "../services/supabasePortfolioService";
 import { formatCompactMoney, formatSignedPct } from "../utils/format";
 
 const baseGrid = { stroke: "#1d3044", strokeDasharray: "3 3" };
@@ -11,7 +11,7 @@ function formatTime(value?: string) {
 }
 
 export function PaperPortfolioPage() {
-  const [state, setState] = useState<AppwritePortfolioState>(() => emptyPortfolioState());
+  const [state, setState] = useState<SupabasePortfolioState>(() => emptyPortfolioState());
   const [loading, setLoading] = useState(true);
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -37,7 +37,7 @@ export function PaperPortfolioPage() {
       </div>
 
       <div className="v2-card" style={{ marginBottom: 16 }}>
-        <div className="v2-card-head"><div><h2>{state.status === "active" ? "账户运行中" : "账户准备中"}</h2><small>{state.message}</small></div><span className={`tag ${state.status === "error" ? "red" : "green"}`}>{state.status === "active" ? "自动运行" : state.status === "error" ? "读取异常" : "等待行情授权"}</span></div>
+        <div className="v2-card-head"><div><h2>{state.status === "active" ? "账户运行中" : "账户准备中"}</h2><small>{state.message}</small></div><span className={`tag ${state.status === "error" ? "red" : "green"}`}>{state.status === "active" ? "自动运行" : state.status === "error" ? "读取异常" : "等待操盘引擎"}</span></div>
       </div>
 
       <div className="auto-stat-grid">
@@ -57,7 +57,7 @@ export function PaperPortfolioPage() {
             </ComposedChart>
           </ResponsiveContainer>
         </div>
-        <div className="v2-card auto-rules"><div className="v2-card-head"><h2>低占用运行规则</h2></div><ul><li><b>行情：</b>不保存全市场逐笔历史，只在内存筛选</li><li><b>监控：</b>盘中仅跟踪持仓和小型候选池</li><li><b>记录：</b>只写账户、持仓、成交和压缩快照</li><li><b>时间：</b>仅在 A 股交易时段运行，其他时间立即退出</li><li><b>安全：</b>行情密钥只放 Appwrite 函数环境，不进入网页</li><li><b>当前：</b>现金 {formatCompactMoney(state.cash)} · 持仓 {formatCompactMoney(positionValue)}</li></ul></div>
+        <div className="v2-card auto-rules"><div className="v2-card-head"><h2>低占用运行规则</h2></div><ul><li><b>行情：</b>不保存全市场逐笔历史，只在内存筛选</li><li><b>监控：</b>盘中仅跟踪持仓和小型候选池</li><li><b>记录：</b>只写账户、持仓、成交和压缩快照</li><li><b>时间：</b>仅在 A 股交易时段运行，其他时间立即退出</li><li><b>安全：</b>后台写入密钥只放 Supabase Edge Function，不进入网页</li><li><b>当前：</b>现金 {formatCompactMoney(state.cash)} · 持仓 {formatCompactMoney(positionValue)}</li></ul></div>
       </div>
 
       <div className="v2-card">
