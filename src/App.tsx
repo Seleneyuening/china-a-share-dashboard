@@ -1,4 +1,4 @@
-import { Activity, BarChart3, Beaker, Bell, BookOpenText, Eye, FlaskConical, Gauge, Globe2, History, LayoutGrid, LineChart as LineIcon, Moon, Newspaper, RefreshCw, SlidersHorizontal, Star, Sun, Wallet } from "lucide-react";
+import { Activity, Bell, Eye, FlaskConical, Globe2, History, LayoutGrid, LineChart as LineIcon, Moon, RefreshCw, Sun, Wallet } from "lucide-react";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import {
   Area,
@@ -31,7 +31,6 @@ import { MonitoringGroupsPage } from "./pages/MonitoringGroupsPage";
 import { PatternLabPage } from "./pages/PatternLabPage";
 import { StrategyLabPage } from "./pages/StrategyLabPage";
 import { PaperPortfolioPage } from "./pages/PaperPortfolioPage";
-import { PortfolioCommandPage } from "./pages/PortfolioCommandPage";
 import { PortfolioRecordPage } from "./pages/PortfolioRecordPage";
 import { ThemeSolarSystemPage, ThemeTop50Page } from "./pages/ThemeSolarSystemPage";
 import { marketDataService } from "./services/marketDataService";
@@ -40,26 +39,27 @@ import { alertStorage } from "./services/alertStorage";
 import { bySymbol, calculateCorrelation, calculateRelativeStrength, calculateReturn, getMarketStatus, metaFor, normalizeSeriesToBase100, signed } from "./services/calculations";
 import type { IndexMeta, Point, RangeKey } from "./types";
 
-type Page = "marketJournal" | "overview" | "intraday" | "overlay" | "compare" | "monitoringGroups" | "themeSolarSystem" | "themeTop50" | "anomalyRadar" | "historyReplay" | "patternLab" | "strategyLab" | "paperPortfolio" | "portfolioRecord" | "portfolioCommand" | "alerts";
+type Page = "overview" | "marketAnalysis" | "opportunityRadar" | "marketReplay" | "strategyResearch" | "virtualAccount" | "alerts";
+type MarketAnalysisTab = "intraday" | "overlay" | "compare";
+type OpportunityTab = "monitoringGroups" | "themeSolarSystem" | "themeTop50" | "anomalyRadar";
+type ReplayTab = "marketJournal" | "historyReplay";
+type StrategyTab = "patternLab" | "strategyLab";
+type AccountTab = "paperPortfolio" | "portfolioRecord";
 
 const navItems: Array<{ id: Page; label: string; icon: typeof LayoutGrid; group: "市场观察" | "研究工具" | "虚拟账户" }> = [
-  { id: "marketJournal", label: "市场日志", icon: Newspaper, group: "市场观察" },
   { id: "overview", label: "总览", icon: LayoutGrid, group: "市场观察" },
-  { id: "intraday", label: "分时图", icon: LineIcon, group: "市场观察" },
-  { id: "overlay", label: "叠加图", icon: BarChart3, group: "市场观察" },
-  { id: "compare", label: "对比分析", icon: SlidersHorizontal, group: "市场观察" },
-  { id: "monitoringGroups", label: "监控组", icon: Star, group: "市场观察" },
-  { id: "themeSolarSystem", label: "主题", icon: Sun, group: "市场观察" },
-  { id: "themeTop50", label: "榜单变化", icon: BarChart3, group: "市场观察" },
-  { id: "anomalyRadar", label: "异动雷达", icon: Activity, group: "市场观察" },
-  { id: "historyReplay", label: "历史回放", icon: History, group: "研究工具" },
-  { id: "patternLab", label: "模式实验室", icon: FlaskConical, group: "研究工具" },
-  { id: "strategyLab", label: "策略实验室", icon: Beaker, group: "研究工具" },
-  { id: "paperPortfolio", label: "自主操盘", icon: Wallet, group: "虚拟账户" },
-  { id: "portfolioRecord", label: "资金与交易记录", icon: BookOpenText, group: "虚拟账户" },
-  { id: "portfolioCommand", label: "组合指挥中心", icon: Gauge, group: "虚拟账户" },
-  { id: "alerts", label: "自定义提醒", icon: Bell, group: "虚拟账户" },
+  { id: "marketAnalysis", label: "行情分析", icon: LineIcon, group: "市场观察" },
+  { id: "opportunityRadar", label: "机会雷达", icon: Activity, group: "市场观察" },
+  { id: "marketReplay", label: "市场复盘", icon: History, group: "研究工具" },
+  { id: "strategyResearch", label: "策略研究", icon: FlaskConical, group: "研究工具" },
+  { id: "virtualAccount", label: "虚拟账户", icon: Wallet, group: "虚拟账户" },
 ];
+
+const marketAnalysisTabs: Array<{ id: MarketAnalysisTab; label: string }> = [{ id: "intraday", label: "个股分时" }, { id: "overlay", label: "指数叠加" }, { id: "compare", label: "对比分析" }];
+const opportunityTabs: Array<{ id: OpportunityTab; label: string }> = [{ id: "monitoringGroups", label: "自选监控" }, { id: "themeSolarSystem", label: "主题热度" }, { id: "themeTop50", label: "榜单变化" }, { id: "anomalyRadar", label: "异动雷达" }];
+const replayTabs: Array<{ id: ReplayTab; label: string }> = [{ id: "marketJournal", label: "市场日志" }, { id: "historyReplay", label: "历史回放" }];
+const strategyTabs: Array<{ id: StrategyTab; label: string }> = [{ id: "patternLab", label: "模式发现" }, { id: "strategyLab", label: "策略验证" }];
+const accountTabs: Array<{ id: AccountTab; label: string }> = [{ id: "paperPortfolio", label: "账户总览" }, { id: "portfolioRecord", label: "持仓与交易记录" }];
 
 const alertPollIntervalMs = 30 * 1000;
 
@@ -70,9 +70,41 @@ let quoteBySymbol = bySymbol(marketDataService.getLatestQuotes(activeSnapshot));
 const marketById = Object.fromEntries(markets.map((market) => [market.id, market]));
 const baseGrid = { stroke: "#1d3044", strokeDasharray: "3 3" };
 
+const requestedPage = new URLSearchParams(window.location.search).get("page");
+const pageAliases: Record<string, Page> = {
+  overview: "overview",
+  marketAnalysis: "marketAnalysis",
+  opportunityRadar: "opportunityRadar",
+  marketReplay: "marketReplay",
+  strategyResearch: "strategyResearch",
+  virtualAccount: "virtualAccount",
+  intraday: "marketAnalysis",
+  overlay: "marketAnalysis",
+  compare: "marketAnalysis",
+  monitoringGroups: "opportunityRadar",
+  themeSolarSystem: "opportunityRadar",
+  themeTop50: "opportunityRadar",
+  anomalyRadar: "opportunityRadar",
+  marketJournal: "marketReplay",
+  historyReplay: "marketReplay",
+  patternLab: "strategyResearch",
+  strategyLab: "strategyResearch",
+  paperPortfolio: "virtualAccount",
+  portfolioRecord: "virtualAccount",
+  portfolioCommand: "virtualAccount",
+  alerts: "alerts",
+};
+
 function initialPage(): Page {
-  const requested = new URLSearchParams(window.location.search).get("page") as Page | null;
-  return requested && navItems.some((item) => item.id === requested) ? requested : "overview";
+  return requestedPage ? pageAliases[requestedPage] || "overview" : "overview";
+}
+
+function WorkspaceTabs<T extends string>({ tabs, active, onChange, label }: { tabs: Array<{ id: T; label: string }>; active: T; onChange: (tab: T) => void; label: string }) {
+  return (
+    <div className="tabs wrap workspace-tabs" role="tablist" aria-label={label}>
+      {tabs.map((tab) => <button key={tab.id} role="tab" aria-selected={active === tab.id} className={active === tab.id ? "active" : ""} onClick={() => onChange(tab.id)}>{tab.label}</button>)}
+    </div>
+  );
 }
 
 function formatNumber(value: number) {
@@ -82,6 +114,11 @@ function formatNumber(value: number) {
 function App() {
   const [snapshot, setSnapshot] = useState(() => marketDataService.getSnapshot());
   const [page, setPage] = useState<Page>(initialPage);
+  const [marketAnalysisTab, setMarketAnalysisTab] = useState<MarketAnalysisTab>(() => requestedPage === "overlay" ? "overlay" : requestedPage === "compare" ? "compare" : "intraday");
+  const [opportunityTab, setOpportunityTab] = useState<OpportunityTab>(() => requestedPage === "themeSolarSystem" || requestedPage === "themeTop50" || requestedPage === "anomalyRadar" ? requestedPage : "monitoringGroups");
+  const [replayTab, setReplayTab] = useState<ReplayTab>(() => requestedPage === "historyReplay" ? "historyReplay" : "marketJournal");
+  const [strategyTab, setStrategyTab] = useState<StrategyTab>(() => requestedPage === "strategyLab" ? "strategyLab" : "patternLab");
+  const [accountTab, setAccountTab] = useState<AccountTab>(() => requestedPage === "portfolioRecord" ? "portfolioRecord" : "paperPortfolio");
   const [selectedSymbol, setSelectedSymbol] = useState("000001.SH");
   const [range, setRange] = useState<RangeKey>("1D");
   const [showPrevClose, setShowPrevClose] = useState(true);
@@ -117,7 +154,8 @@ function App() {
 
   function openIntraday(symbol: string) {
     setSelectedSymbol(symbol);
-    setPage("intraday");
+    setMarketAnalysisTab("intraday");
+    setPage("marketAnalysis");
   }
 
   function toggleVisible(symbol: string) {
@@ -128,7 +166,7 @@ function App() {
     });
   }
 
-  const pageTitle = navItems.find((item) => item.id === page)?.label || "总览";
+  const pageTitle = page === "alerts" ? "自定义提醒" : navItems.find((item) => item.id === page)?.label || "总览";
 
   return (
     <div className="app">
@@ -159,7 +197,7 @@ function App() {
       <main>
         <header className="topbar">
           <div>
-            {page !== "themeSolarSystem" && <p className="eyebrow">{pageTitle}</p>}
+            <p className="eyebrow">{pageTitle}</p>
             <h1>A 股市场看板</h1>
           </div>
           <div className="top-actions">
@@ -179,21 +217,35 @@ function App() {
           </div>
         </header>
 
-        {page === "marketJournal" && <MarketJournalPage />}
         {page === "overview" && <Overview rankMode={rankMode} setRankMode={setRankMode} openIntraday={openIntraday} />}
-        {page === "intraday" && <Intraday selectedSymbol={selectedSymbol} setSelectedSymbol={setSelectedSymbol} showPrevClose={showPrevClose} setShowPrevClose={setShowPrevClose} />}
-        {page === "overlay" && <Overlay range={range} setRange={setRange} visibleSymbols={visibleSymbols} toggleVisible={toggleVisible} snapshotSource={snapshot.source} />}
-        {page === "compare" && <Compare />}
-        {page === "monitoringGroups" && <MonitoringGroupsPage />}
-        {page === "themeSolarSystem" && <ThemeSolarSystemPage />}
-        {page === "themeTop50" && <ThemeTop50Page />}
-        {page === "anomalyRadar" && <AnomalyRadarPage />}
-        {page === "historyReplay" && <HistoryReplayPage />}
-        {page === "patternLab" && <PatternLabPage />}
-        {page === "strategyLab" && <StrategyLabPage />}
-        {page === "paperPortfolio" && <PaperPortfolioPage />}
-        {page === "portfolioRecord" && <PortfolioRecordPage />}
-        {page === "portfolioCommand" && <PortfolioCommandPage />}
+        {page === "marketAnalysis" && <>
+          <WorkspaceTabs label="行情分析视图" active={marketAnalysisTab} onChange={setMarketAnalysisTab} tabs={marketAnalysisTabs} />
+          {marketAnalysisTab === "intraday" && <Intraday selectedSymbol={selectedSymbol} setSelectedSymbol={setSelectedSymbol} showPrevClose={showPrevClose} setShowPrevClose={setShowPrevClose} />}
+          {marketAnalysisTab === "overlay" && <Overlay range={range} setRange={setRange} visibleSymbols={visibleSymbols} toggleVisible={toggleVisible} snapshotSource={snapshot.source} />}
+          {marketAnalysisTab === "compare" && <Compare />}
+        </>}
+        {page === "opportunityRadar" && <>
+          <WorkspaceTabs label="机会雷达视图" active={opportunityTab} onChange={setOpportunityTab} tabs={opportunityTabs} />
+          {opportunityTab === "monitoringGroups" && <MonitoringGroupsPage />}
+          {opportunityTab === "themeSolarSystem" && <ThemeSolarSystemPage />}
+          {opportunityTab === "themeTop50" && <ThemeTop50Page />}
+          {opportunityTab === "anomalyRadar" && <AnomalyRadarPage />}
+        </>}
+        {page === "marketReplay" && <>
+          <WorkspaceTabs label="市场复盘视图" active={replayTab} onChange={setReplayTab} tabs={replayTabs} />
+          {replayTab === "marketJournal" && <MarketJournalPage />}
+          {replayTab === "historyReplay" && <HistoryReplayPage />}
+        </>}
+        {page === "strategyResearch" && <>
+          <WorkspaceTabs label="策略研究视图" active={strategyTab} onChange={setStrategyTab} tabs={strategyTabs} />
+          {strategyTab === "patternLab" && <PatternLabPage />}
+          {strategyTab === "strategyLab" && <StrategyLabPage />}
+        </>}
+        {page === "virtualAccount" && <>
+          <WorkspaceTabs label="虚拟账户视图" active={accountTab} onChange={setAccountTab} tabs={accountTabs} />
+          {accountTab === "paperPortfolio" && <PaperPortfolioPage />}
+          {accountTab === "portfolioRecord" && <PortfolioRecordPage />}
+        </>}
         {page === "alerts" && <AlertsPage />}
 
       </main>

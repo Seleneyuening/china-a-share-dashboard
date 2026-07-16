@@ -334,6 +334,18 @@ main {
   max-width: 100%;
 }
 
+.workspace-tabs {
+  width: 100%;
+  margin: 0 0 16px;
+  padding: 6px;
+  overflow-x: auto;
+  flex-wrap: nowrap;
+}
+
+.workspace-tabs button {
+  flex: 0 0 auto;
+}
+
 .tabs button,
 .segmented button {
   min-height: 32px;
