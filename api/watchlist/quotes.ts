@@ -1,4 +1,4 @@
-import { stockQuoteMocks } from "../../src/data/mockQuotes";
+import { stockQuoteMocks } from "../../src/data/mockQuotes.js";
 
 type YahooResult = {
   meta?: {
