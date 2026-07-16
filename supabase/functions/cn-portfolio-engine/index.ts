@@ -1,6 +1,19 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 type Spot = { symbol: string; market: "SH" | "SZ" | "BJ"; name: string; price: number; changePct: number; volume: number; turnover: number; amplitude: number; turnoverRate: number; volumeRatio: number; fiveMinute: number; prevClose: number; marketCap: number; return60d: number };
+type StrategyParameters = {
+  positiveRatioMin: number; averageChangeMin: number; minimumScore: number; maxPositions: number; maxExposure: number;
+  positionEquityPct: number; cashBudgetPct: number; cooldownMinutes: number; stopLossPct: number; takeProfitPct: number;
+  maxHoldDays: number; weakDayChangePct: number; changePctMin: number; changePctMax: number; turnoverRateMin: number;
+  turnoverRateMax: number; volumeRatioMin: number; volumeRatioMax: number; fiveMinuteMin: number; return60dMin: number; return60dMax: number;
+};
+
+const DEFAULT_PARAMETERS: StrategyParameters = {
+  positiveRatioMin: 0.58, averageChangeMin: 0.55, minimumScore: 12, maxPositions: 3, maxExposure: 0.4,
+  positionEquityPct: 0.12, cashBudgetPct: 0.18, cooldownMinutes: 30, stopLossPct: -5, takeProfitPct: 10,
+  maxHoldDays: 12, weakDayChangePct: -4, changePctMin: 1.2, changePctMax: 7, turnoverRateMin: 1,
+  turnoverRateMax: 15, volumeRatioMin: 1.05, volumeRatioMax: 4, fiveMinuteMin: -0.8, return60dMin: -8, return60dMax: 60,
+};
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json; charset=utf-8" } });
 const number = (value: unknown) => Number.isFinite(Number(value)) ? Number(value) : 0;
@@ -26,8 +39,16 @@ function score(item: Spot) {
   return item.changePct * 1.8 + Math.min(item.volumeRatio, 3) * 1.8 + item.fiveMinute * 1.2 + Math.min(item.turnoverRate, 12) * 0.18 + Math.max(-10, Math.min(item.return60d, 40)) * 0.04 - Math.max(0, item.amplitude - 8) * 0.8;
 }
 
-function eligible(item: Spot) {
-  return !/ST|退|N|C/.test(item.name) && item.price >= 3 && item.price <= 200 && item.marketCap >= 2_000_000_000 && item.changePct >= 1.2 && item.changePct <= 7 && item.turnoverRate >= 1 && item.turnoverRate <= 15 && item.volumeRatio >= 1.05 && item.volumeRatio <= 4 && item.fiveMinute > -0.8 && item.return60d > -8 && item.return60d < 60;
+function eligible(item: Spot, parameters: StrategyParameters) {
+  return !/ST|退|N|C/.test(item.name) && item.price >= 3 && item.price <= 200 && item.marketCap >= 2_000_000_000 && item.changePct >= parameters.changePctMin && item.changePct <= parameters.changePctMax && item.turnoverRate >= parameters.turnoverRateMin && item.turnoverRate <= parameters.turnoverRateMax && item.volumeRatio >= parameters.volumeRatioMin && item.volumeRatio <= parameters.volumeRatioMax && item.fiveMinute > parameters.fiveMinuteMin && item.return60d > parameters.return60dMin && item.return60d < parameters.return60dMax;
+}
+
+function resolveParameters(value: unknown): StrategyParameters {
+  const source = value && typeof value === "object" ? value as Record<string, unknown> : {};
+  return Object.fromEntries(Object.entries(DEFAULT_PARAMETERS).map(([key, fallback]) => {
+    const candidate = Number(source[key]);
+    return [key, Number.isFinite(candidate) ? candidate : fallback];
+  })) as StrategyParameters;
 }
 
 function commission(gross: number, sell = false) {
@@ -44,14 +65,17 @@ Deno.serve(async () => {
   if (runError?.code === "23505") return json({ ok: true, skipped: "duplicate_slot" });
   if (runError || !run) return json({ ok: false, error: runError?.message || "run lock failed" }, 500);
   try {
-    const [universe, accountResult, positionsResult, recentTradesResult] = await Promise.all([
+    const [universe, accountResult, positionsResult, recentTradesResult, strategyResult] = await Promise.all([
       fetchLiquidUniverse(),
       supabase.from("cn_portfolio_accounts").select("*").eq("account_id", "main").single(),
       supabase.from("cn_portfolio_positions").select("*").eq("account_id", "main"),
       supabase.from("cn_portfolio_trades").select("side,occurred_at").eq("account_id", "main").order("occurred_at", { ascending: false }).limit(1),
+      supabase.from("cn_strategy_versions").select("strategy_version,parameters").eq("status", "active").single(),
     ]);
     if (accountResult.error || !accountResult.data) throw new Error(accountResult.error?.message || "account unavailable");
     const account = accountResult.data;
+    const parameters = resolveParameters(strategyResult.data?.parameters);
+    const strategyVersion = Number(strategyResult.data?.strategy_version || account.strategy_version || 1);
     const positions = positionsResult.data || [];
     const bySymbol = new Map(universe.map((item) => [item.symbol, item]));
     let actionCount = 0;
@@ -65,39 +89,39 @@ Deno.serve(async () => {
       const openedDate = new Date(position.opened_at).toLocaleDateString("en-CA", { timeZone: "Asia/Shanghai" });
       const today = `${parts.year}-${parts.month}-${parts.day}`;
       const heldDays = Math.floor((Date.now() - new Date(position.opened_at).getTime()) / 86_400_000);
-      const sellReason = openedDate < today && pnlPct <= -5 ? `止损：浮亏 ${pnlPct.toFixed(2)}%` : openedDate < today && pnlPct >= 10 ? `止盈：浮盈 ${pnlPct.toFixed(2)}%` : openedDate < today && heldDays >= 12 ? `持有 ${heldDays} 天，机会成本退出` : openedDate < today && quote.changePct <= -4 ? `当日走弱 ${quote.changePct.toFixed(2)}%` : "";
+      const sellReason = openedDate < today && pnlPct <= parameters.stopLossPct ? `止损：浮亏 ${pnlPct.toFixed(2)}%` : openedDate < today && pnlPct >= parameters.takeProfitPct ? `止盈：浮盈 ${pnlPct.toFixed(2)}%` : openedDate < today && heldDays >= parameters.maxHoldDays ? `持有 ${heldDays} 天，机会成本退出` : openedDate < today && quote.changePct <= parameters.weakDayChangePct ? `当日走弱 ${quote.changePct.toFixed(2)}%` : "";
       if (sellReason) {
         const gross = number(position.quantity) * quote.price;
         const fee = commission(gross, true);
-        const { error } = await supabase.rpc("cn_execute_virtual_trade", { p_side: "卖出", p_symbol: position.symbol, p_market: position.market, p_company_name: position.company_name, p_quantity: position.quantity, p_price: quote.price, p_fee: fee, p_reason: sellReason, p_strategy_version: account.strategy_version });
+        const { error } = await supabase.rpc("cn_execute_virtual_trade", { p_side: "卖出", p_symbol: position.symbol, p_market: position.market, p_company_name: position.company_name, p_quantity: position.quantity, p_price: quote.price, p_fee: fee, p_reason: sellReason, p_strategy_version: strategyVersion });
         if (!error) { cash += gross - fee; actionCount += 1; }
       }
     }
 
     const positiveRatio = universe.filter((item) => item.changePct > 0).length / Math.max(universe.length, 1);
     const averageChange = universe.reduce((sum, item) => sum + item.changePct, 0) / Math.max(universe.length, 1);
-    const marketHealthy = positiveRatio >= 0.58 && averageChange >= 0.55;
-    const candidates = universe.filter(eligible).sort((a, b) => score(b) - score(a));
+    const marketHealthy = positiveRatio >= parameters.positiveRatioMin && averageChange >= parameters.averageChangeMin;
+    const candidates = universe.filter((item) => eligible(item, parameters)).sort((a, b) => score(b) - score(a));
     const lastTradeAt = recentTradesResult.data?.[0]?.occurred_at ? new Date(recentTradesResult.data[0].occurred_at).getTime() : 0;
-    const cooldownPassed = Date.now() - lastTradeAt >= 30 * 60 * 1000;
+    const cooldownPassed = Date.now() - lastTradeAt >= parameters.cooldownMinutes * 60 * 1000;
     const heldSymbols = new Set(positions.map((position) => position.symbol));
     const positionValue = positions.reduce((sum, position) => sum + number(position.quantity) * (bySymbol.get(position.symbol)?.price || number(position.last_price)), 0);
     const equityBeforeBuy = cash + positionValue;
     const exposure = positionValue / Math.max(equityBeforeBuy, 1);
     const best = candidates.find((item) => !heldSymbols.has(item.symbol));
 
-    if (marketHealthy && cooldownPassed && positions.length < 3 && exposure < 0.4 && best && score(best) >= 12) {
-      const budget = Math.min(cash * 0.18, equityBeforeBuy * 0.12);
+    if (marketHealthy && cooldownPassed && positions.length < parameters.maxPositions && exposure < parameters.maxExposure && best && score(best) >= parameters.minimumScore) {
+      const budget = Math.min(cash * parameters.cashBudgetPct, equityBeforeBuy * parameters.positionEquityPct);
       const quantity = Math.floor(budget / best.price / 100) * 100;
       if (quantity >= 100) {
         const gross = quantity * best.price;
         const fee = commission(gross);
         const reason = `市场门槛通过，动态全市场候选评分 ${score(best).toFixed(2)}；涨幅 ${best.changePct.toFixed(2)}%，量比 ${best.volumeRatio.toFixed(2)}`;
-        const { error } = await supabase.rpc("cn_execute_virtual_trade", { p_side: "买入", p_symbol: best.symbol, p_market: best.market, p_company_name: best.name, p_quantity: quantity, p_price: best.price, p_fee: fee, p_reason: reason, p_strategy_version: account.strategy_version });
+        const { error } = await supabase.rpc("cn_execute_virtual_trade", { p_side: "买入", p_symbol: best.symbol, p_market: best.market, p_company_name: best.name, p_quantity: quantity, p_price: best.price, p_fee: fee, p_reason: reason, p_strategy_version: strategyVersion });
         if (!error) actionCount += 1;
       }
     } else if (actionCount === 0) {
-      await supabase.from("cn_strategy_decisions").insert({ account_id: "main", action: "HOLD_CASH", reason: marketHealthy ? "存在候选但信号强度、仓位或冷却期未满足，继续等待" : `市场门槛未通过：活跃股票上涨占比 ${(positiveRatio * 100).toFixed(1)}%，平均涨幅 ${averageChange.toFixed(2)}%`, market_state: { positiveRatio, averageChange, marketHealthy }, payload: { topCandidate: best ? { symbol: best.symbol, name: best.name, score: score(best) } : null }, strategy_version: account.strategy_version });
+      await supabase.from("cn_strategy_decisions").insert({ account_id: "main", action: "HOLD_CASH", reason: marketHealthy ? "存在候选但信号强度、仓位或冷却期未满足，继续等待" : `市场门槛未通过：活跃股票上涨占比 ${(positiveRatio * 100).toFixed(1)}%，平均涨幅 ${averageChange.toFixed(2)}%`, market_state: { positiveRatio, averageChange, marketHealthy }, payload: { topCandidate: best ? { symbol: best.symbol, name: best.name, score: score(best) } : null, parameters }, strategy_version: strategyVersion });
     }
 
     const refreshedPositions = await supabase.from("cn_portfolio_positions").select("quantity,last_price").eq("account_id", "main");
@@ -106,10 +130,13 @@ Deno.serve(async () => {
     const finalPositionValue = (refreshedPositions.data || []).reduce((sum, position) => sum + number(position.quantity) * number(position.last_price), 0);
     const equity = finalCash + finalPositionValue;
     const cumulativeReturn = (equity / number(refreshedAccount.data?.initial_capital) - 1) * 100;
+    const peakSnapshot = await supabase.from("cn_portfolio_snapshots").select("equity").eq("account_id", "main").order("equity", { ascending: false }).limit(1).maybeSingle();
+    const peakEquity = Math.max(equity, number(peakSnapshot.data?.equity));
+    const drawdown = peakEquity > 0 ? (equity / peakEquity - 1) * 100 : 0;
     await Promise.all([
-      supabase.from("cn_portfolio_accounts").update({ equity, last_market_at: new Date().toISOString(), status: "active", message: actionCount ? `本轮完成 ${actionCount} 笔虚拟成交` : "本轮选择继续等待或持仓", updated_at: new Date().toISOString() }).eq("account_id", "main"),
-      supabase.from("cn_portfolio_snapshots").insert({ account_id: "main", captured_at: new Date().toISOString(), cash: finalCash, equity, cumulative_return: cumulativeReturn, drawdown: 0 }),
-      supabase.from("cn_engine_runs").update({ finished_at: new Date().toISOString(), status: actionCount ? "succeeded" : "skipped", universe_size: universe.length, candidate_count: candidates.length, action_count: actionCount, message: actionCount ? `完成 ${actionCount} 笔虚拟成交` : "无满足门槛的交易", metrics: { positiveRatio, averageChange, equity } }).eq("run_id", run.run_id),
+      supabase.from("cn_portfolio_accounts").update({ equity, strategy_version: strategyVersion, last_market_at: new Date().toISOString(), status: "active", message: actionCount ? `V${strategyVersion} 本轮完成 ${actionCount} 笔虚拟成交` : `V${strategyVersion} 本轮选择继续等待或持仓`, updated_at: new Date().toISOString() }).eq("account_id", "main"),
+      supabase.from("cn_portfolio_snapshots").insert({ account_id: "main", captured_at: new Date().toISOString(), cash: finalCash, equity, cumulative_return: cumulativeReturn, drawdown }),
+      supabase.from("cn_engine_runs").update({ finished_at: new Date().toISOString(), status: actionCount ? "succeeded" : "skipped", universe_size: universe.length, candidate_count: candidates.length, action_count: actionCount, message: actionCount ? `V${strategyVersion} 完成 ${actionCount} 笔虚拟成交` : `V${strategyVersion} 无满足门槛的交易`, metrics: { positiveRatio, averageChange, equity, drawdown, exposure, strategyVersion, parameters, topCandidate: best ? { symbol: best.symbol, name: best.name, score: score(best) } : null } }).eq("run_id", run.run_id),
     ]);
     return json({ ok: true, actionCount, universeSize: universe.length, candidateCount: candidates.length, marketHealthy, equity });
   } catch (error) {
