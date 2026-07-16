@@ -33,9 +33,9 @@ async function fetchQuote(symbol: string) {
     close: quote?.close?.[index],
     volume: quote?.volume?.[index],
   })).filter((bar): bar is { timestamp: number; close: number; volume: number | null | undefined } => typeof bar.close === "number");
-  const current = bars.at(-1);
-  const previous = bars.at(-2);
-  const beforePrevious = bars.at(-3);
+  const current = bars[bars.length - 1];
+  const previous = bars[bars.length - 2];
+  const beforePrevious = bars[bars.length - 3];
   const price = result.meta?.regularMarketPrice ?? current?.close;
   const volume = result.meta?.regularMarketVolume ?? current?.volume;
   const previousClose = result.meta?.previousClose ?? previous?.close;
