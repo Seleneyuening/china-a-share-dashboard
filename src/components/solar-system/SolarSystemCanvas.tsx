@@ -18,7 +18,7 @@ export function SolarSystemCanvas({ summaries, updatedAt, quoteStatus }: { summa
     <div className="solar-canvas">
       <div className="solar-canvas-head">
         <div>
-          <p>按模拟成交金额排序，涨跌使用本地模拟数据 <span>ⓘ</span></p>
+          <p>按自选池成交金额排序，缺失行情不参与计算 <span>ⓘ</span></p>
         </div>
         <div className="solar-live"><span className="live-dot" /> {quoteStatus} {updatedAt}</div>
         <div className="solar-mode"><button className="active">成交金额</button><button>平均涨跌幅</button></div>

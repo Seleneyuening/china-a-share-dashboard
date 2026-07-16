@@ -2,6 +2,7 @@ import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import { stockQuoteMocks } from "./src/data/mockQuotes";
 import { watchlistGroups } from "./src/data/watchlistGroups";
+import { getWatchlistPayload } from "./api/watchlist/quotes";
 
 function json(res: { statusCode: number; setHeader: (name: string, value: string) => void; end: (body: string) => void }, statusCode: number, body: unknown) {
   res.statusCode = statusCode;
@@ -72,6 +73,15 @@ async function proxyFinnhubQuote(req: { url?: string }, res: { statusCode: numbe
     json(res, 200, Object.fromEntries(entries));
   } catch (error) {
     json(res, 502, { error: String(error) });
+  }
+}
+
+async function proxyWatchlistQuotes(_req: { url?: string }, res: { statusCode: number; setHeader: (name: string, value: string) => void; end: (body: string) => void }) {
+  try {
+    const payload = await getWatchlistPayload();
+    json(res, payload.items.length ? 200 : 502, payload.items.length ? payload : { error: "行情源暂时不可用" });
+  } catch (error) {
+    json(res, 502, { error: error instanceof Error ? error.message : String(error) });
   }
 }
 
@@ -317,11 +327,13 @@ export default defineConfig(({ mode }) => {
         server.middlewares.use("/api/yahoo/chart", proxyYahoo);
         server.middlewares.use("/api/finnhub/quote", proxyFinnhubQuote);
         server.middlewares.use("/api/top-volume", proxyTopVolume);
+        server.middlewares.use("/api/watchlist/quotes", proxyWatchlistQuotes);
       },
       configurePreviewServer(server) {
         server.middlewares.use("/api/yahoo/chart", proxyYahoo);
         server.middlewares.use("/api/finnhub/quote", proxyFinnhubQuote);
         server.middlewares.use("/api/top-volume", proxyTopVolume);
+        server.middlewares.use("/api/watchlist/quotes", proxyWatchlistQuotes);
       },
     },
   ],

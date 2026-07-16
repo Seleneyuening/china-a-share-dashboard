@@ -1,62 +1,63 @@
-# Design QA — 虚拟账户与自选监控
+# Design QA — 自选监控大字号与安全数据版
 
 ## Comparison targets
 
-- 虚拟账户 source visual truth: `/Users/liyuening/.codex/generated_images/019f692b-bc26-7b62-a42e-c589c6fc684a/exec-208f58c5-9690-4dc8-a1b0-c41cba58041d.png`
-- 虚拟账户 implementation: `/Users/liyuening/Documents/China A Share Dashboard/artifacts/design-qa/paperPortfolio-redesign-final.png`
-- 自选监控 source visual truth: `/Users/liyuening/.codex/generated_images/019f692b-bc26-7b62-a42e-c589c6fc684a/exec-8b5d37d1-ea0b-47d5-9844-9809873e85c4.png`
-- 自选监控 implementation: `/Users/liyuening/Documents/China A Share Dashboard/artifacts/design-qa/monitoringGroups-watchbook-final.png`
-- Viewport: 1440 × 1024 desktop; responsive overflow also checked at 1180 × 900.
-- State: 虚拟账户为当前真实空账户状态；自选监控为默认选中“人工智能与算力”的本地模拟数据状态。
+- Source visual truth: `/Users/liyuening/Desktop/截屏2026-07-16 14.31.57.png`
+- Implementation screenshot: `/Users/liyuening/Documents/China A Share Dashboard/artifacts/design-qa/monitoringGroups-large-font-final.png`
+- Full-view comparison: `/Users/liyuening/Documents/China A Share Dashboard/artifacts/design-qa/monitoringGroups-reference-comparison.png`
+- Focused row comparison: `/Users/liyuening/Documents/China A Share Dashboard/artifacts/design-qa/monitoringGroups-row-comparison.png`
+- Viewport: in-app desktop browser capture, 2530 × 1423 physical screenshot.
+- State: 自选监控默认分组；Yahoo 延迟行情已加载 52/53，缺失股票不参与计算。
 
 ## Full-view comparison evidence
 
-- 虚拟账户保留了定稿的六项指标带、左侧资产曲线、右侧策略与风控状态、下方持仓和近期成交双栏结构。当前 Supabase 账户尚无持仓或成交，因此图表和表格展示产品真实空状态；这是数据状态差异，不是布局漂移。
-- 自选监控复现了定稿的暖白纸张画布、晨间观察册标题、顶端信号摘要、左侧监控组、中央分级观察清单和右侧主题档案。页面与全局深色夜樱侧栏形成明确但协调的层次。
-- 两页在 1440 宽度无横向溢出，主要区域、操作按钮与页面底部说明均可见。1180 宽度下页面按预定断点重排，`scrollWidth` 与 `clientWidth` 一致。
+- 参考图中所有表格正文约 8–10px，实施版按用户要求将自选监控正文、表头、分组和操作文字放大约三倍，并同步增加行高、栏宽和控件尺寸。
+- 左侧分组、中央观察清单、顶部摘要的暖白纸张风格与原版一致；在当前桌面宽度下，右侧档案区自动移到清单下方，避免大字号挤压八列表格。
+- 参考图绿色框中的板块名称已从每一行删除；红色框中的股票代码与公司名被保留并成为首列主要信息。
+- 实施版数据由固定模拟值切换为 Yahoo 延迟行情，因而股票、涨跌幅和排序与参考截图不同；这是明确的数据状态变化，不是视觉漂移。
 
 ## Focused region comparison evidence
 
-- 虚拟账户重点检查了指标带、资产曲线区间切换、风控四项指标、主次操作按钮、持仓表头和成交空状态；层级、边框、颜色语义和交互状态与定稿一致。
-- 自选监控重点检查了分组选中态、三档观察区标题、行内涨跌/热度/Top50 数据、备注输入、右侧领涨领跌与历史记录。实际操作验证了保存时间回写、备注编辑、仅看重点筛选和详情抽屉。
+- `monitoringGroups-row-comparison.png` 将参考行与实施行放在同一张对照图中。首列从“板块名称 + 股票代码/公司名”精简为“股票代码 + 公司名”，符合红绿框标注。
+- 字体放大后，代码、公司名、涨跌、成交额、热度、排名和状态仍保持独立列，无重叠；观察备注仍可输入。
+- 顶部日期、数据来源、更新时间和部分兜底状态均清晰可见。
 
 ## Required fidelity surfaces
 
-- Fonts and typography: 深色页面使用苹方/日文字体回退，观察册标题使用宋体回退，数字使用等宽数字特性；字号和字重层级与参考一致，无关键文字截断。
-- Spacing and layout rhythm: 主要栅格、卡片间距、分隔线、页面边距和桌面断点已对齐；观察册采用连续纸张式表格，避免了多余浮卡。
-- Colors and visual tokens: 夜樱深蓝、樱花粉、A 股红涨绿跌以及暖白观察册色板均一致；焦点和选中状态清晰。
-- Image quality and asset fidelity: 复用现有高质量夜樱侧栏位图；参考图没有其他必须生成的独立图片资产。未以 CSS 图形或自绘 SVG 替代视觉资产。
-- Copy and content: 保留 A 股、人民币、Top50、热度、模拟数据与投资风险说明；文案与页面任务一致。
-- Icons: 使用现有统一图标库，尺寸与线条风格一致，无文本符号代替交互图标。
-- States and interactions: 账户加载/空状态、区间切换、导出、刷新、分组切换、保存、备注、重点筛选及详情抽屉均已覆盖；浏览器控制台无错误或警告。
-- Accessibility: 核心按钮有可访问名称，观察行支持键盘 Enter/Space，输入框有占位说明，聚焦状态由全局主题提供。
+- Fonts and typography: 表格正文由 8.5px 提升至 25.5px，表头、辅助文字、侧栏和按钮按相同比例放大；标题保持合理视觉层级，避免扩大到无法使用的 81px。
+- Spacing and layout rhythm: 行高、栅格间距、输入框和状态标签同步扩展；窄于 2200px 时档案区下移，主清单保持可读。
+- Colors and visual tokens: 暖白纸张、樱花粉强调、A 股红涨绿跌和夜樱外壳全部保留；修复了日期与分级标题在浅色背景上的对比度。
+- Image quality and asset fidelity: 继续使用项目现有夜樱侧栏位图；本次目标没有新增图片资产需求。
+- Copy and content: 删除固定日期、固定“较昨日”、假换手率和伪造历史；Top50 改为“自选池排名”，数据来源和缺失状态明确展示。
+- Interactions: 行情自动刷新、手动刷新、备注输入与保存、刷新后备注保留均已通过浏览器测试；主题热度、榜单变化与异动雷达也确认读取延迟行情，控制台无错误。
+- Accessibility: 大字号显著改善可读性；关键按钮保留可访问名称，观察行继续支持键盘操作。
 
 ## Findings
 
 - No actionable P0/P1/P2 visual or interaction differences remain.
 
-## Open questions
-
-- None blocking. 虚拟账户上线后会继续展示实际 Supabase 账户数据；空状态不会用虚构持仓填充。
-
 ## Comparison history
 
-1. First pass found a P1 color-token conflict: the global `.night-sakura main` selector made the observation list center dark instead of warm white.
-2. Fixed by explicitly scoping the nested watchbook main surface to a transparent paper background and ink text.
-3. Post-fix capture `/Users/liyuening/Documents/China A Share Dashboard/artifacts/design-qa/monitoringGroups-watchbook-final.png` confirms the entire three-column observation surface is consistently warm white.
-4. Accessibility pass replaced a button containing inputs with a keyboard-enabled row container so note fields are valid interactive controls.
-5. Post-fix build, interaction checks, 1440 comparison captures, and 1180 overflow checks passed with no console errors.
+1. First pass found a P1 contrast issue: dynamic date and tier labels inherited the dark shell's light text and nearly disappeared on the paper background.
+2. Fixed with explicit ink and muted colors scoped to the watchbook heading and tier headers.
+3. First pass also found a P2 width issue: three-column layout plus triple-size text pushed the right dossier entirely off-screen.
+4. Added the 2200px desktop breakpoint so the dossier moves below while the eight-column observation list keeps adequate width.
+5. Post-fix full-view and focused comparison images show readable columns, correct red/green annotation handling, and no visible overlap.
 
 ## Implementation checklist
 
-- [x] 虚拟账户 option 1 implemented.
-- [x] 自选监控 option 3 implemented.
-- [x] Core interactions verified.
-- [x] Desktop and narrower desktop layouts checked.
-- [x] Production build passed.
+- [x] Green-box board names removed from every observation row.
+- [x] Red-box ticker and company retained.
+- [x] Watchbook text enlarged approximately three times.
+- [x] Yahoo delayed watchlist data connected with five-minute refresh.
+- [x] Coverage, missing-symbol handling and error status added without mixing mock values into live calculations.
+- [x] Tier counts, day-over-day comparison, heat and strongest signal derived from consistent data.
+- [x] Fake turnover and hard-coded history removed.
+- [x] Daily local snapshots and note persistence added.
+- [x] Production build and browser interaction checks passed.
 
 ## Follow-up polish
 
-- P3: 当账户积累更多快照、持仓和交易后，资产曲线与下方表格会自然达到参考图的视觉密度。
+- P3: Historical rows will naturally expand after the page has accumulated multiple trading-day snapshots in this browser.
 
 final result: passed

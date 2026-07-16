@@ -3458,6 +3458,91 @@ body {
 .watchbook-footer-tools button { border: 1px solid var(--watch-rule); border-radius: 3px; background: #fff; }
 .watchbook-page .mock-note { margin: 5px 0 0; color: #9b9095; font-size: 8px; text-align: left; }
 
+/* Large-type accessibility pass requested for the watchbook screen. */
+.watchbook-page { overflow-x: auto; font-size: 24px; }
+.watchbook-heading { min-width: 1500px; margin-bottom: 28px; }
+.watchbook-heading p { margin-bottom: 8px; font-size: 30px; }
+.watchbook-heading h1 { font-size: 54px; }
+.watchbook-heading h1 span { width: 44px; height: 44px; margin-left: 14px; font-size: 22px; vertical-align: 7px; }
+.watchbook-heading > div:last-child { gap: 24px; }
+.watchbook-heading > div:last-child strong { color: #493f45; font-size: 30px; }
+.watchbook-heading > div:last-child small { font-size: 24px; }
+.watchbook-summary-strip { grid-template-columns: 1.25fr repeat(3,.72fr) 1.4fr; min-width: 1800px; min-height: 150px; margin-bottom: 24px; }
+.watchbook-summary-strip > div { gap: 20px; padding: 24px 30px; }
+.watchbook-summary-strip svg { width: 38px; height: 38px; }
+.watchbook-summary-strip span { font-size: 28px; }
+.watchbook-summary-strip strong { margin-top: 6px; font-size: 44px; }
+.watchbook-summary-strip small { margin-top: 4px; font-size: 22px; line-height: 1.35; }
+.watchbook-strongest > b { font-size: 36px; }
+.watchbook-layout { grid-template-columns: 330px minmax(2050px,1fr) 470px; min-width: 2850px; min-height: 1180px; overflow: visible; }
+.watchbook-group-index { padding: 24px 20px; }
+.watchbook-panel-head { min-height: 70px; }
+.watchbook-panel-head h2 { font-size: 36px; }
+.watchbook-panel-head small { font-size: 22px; }
+.watchbook-panel-head svg,
+.watchbook-index-actions svg,
+.watchbook-footer-tools svg { width: 28px; height: 28px; }
+.watchbook-group-index > button { min-height: 78px; padding: 15px 18px; font-size: 27px; }
+.watchbook-new-group { margin-top: 15px; }
+.watchbook-index-actions { gap: 10px; padding-top: 24px; }
+.watchbook-index-actions button { gap: 8px; padding: 14px 10px; font-size: 24px; }
+.watchbook-center,
+.night-sakura main.watchbook-center { padding: 24px 24px 0; }
+.watchbook-center > .watchbook-panel-head { margin: 0 8px 14px; }
+.watchbook-center > .watchbook-panel-head > button { gap: 10px; padding: 10px 16px; font-size: 24px; }
+.watchbook-tier { margin-bottom: 12px; }
+.watchbook-tier > header { gap: 16px; min-height: 68px; padding: 0 8px; }
+.watchbook-tier > header i { width: 6px; height: 36px; }
+.watchbook-tier > header h3 { color: #3b3338; font-size: 30px; }
+.watchbook-tier > header span { color: #81787d; font-size: 23px; }
+.watchbook-table-head,
+.watchbook-row { grid-template-columns: 1.08fr 1.3fr .8fr .82fr .64fr .72fr .72fr 1.08fr; gap: 20px; }
+.watchbook-table-head { min-height: 60px; padding: 0 16px; font-size: 22px; }
+.watchbook-row { min-height: 128px; padding: 14px 16px; font-size: 25.5px; line-height: 1.35; }
+.watchbook-row b { font-size: 27px; }
+.watchbook-row small { margin-top: 7px; font-size: 22.5px; }
+.watchbook-target { grid-template-columns: 38px 1fr; }
+.watchbook-target svg { width: 28px; height: 28px; }
+.watchbook-row .stock-status { padding: 7px 10px; font-size: 20px; }
+.watchbook-row .status-badges { gap: 8px; }
+.watchbook-row .status-badges span { padding: 8px 11px; border-radius: 9px; font-size: 20px; }
+.watchbook-note input { padding: 14px 42px 14px 14px; border-radius: 7px; font-size: 22px; }
+.watchbook-note svg { right: 11px; width: 25px; height: 25px; }
+.watchbook-savebar { gap: 24px; padding: 18px 0 20px; }
+.watchbook-savebar button { gap: 14px; padding: 18px 24px; font-size: 25px; }
+.watchbook-savebar button svg { width: 28px; height: 28px; }
+.watchbook-savebar span { font-size: 21px; }
+.watchbook-dossier { padding: 28px 24px; }
+.watchbook-dossier-title span { font-size: 36px; }
+.watchbook-dossier-title small { font-size: 23px; }
+.watchbook-dossier-title b { font-size: 31px; }
+.watchbook-dossier-value { margin: 22px 0 16px; font-size: 48px; }
+.watchbook-dossier-metrics { padding: 16px 0 20px; }
+.watchbook-dossier-metrics div { padding: 0 12px; }
+.watchbook-dossier-metrics span { font-size: 20px; }
+.watchbook-dossier-metrics b { font-size: 23px; }
+.watchbook-dossier section { padding: 22px 0; }
+.watchbook-dossier h3 { margin-bottom: 14px; font-size: 27px; }
+.watchbook-dossier section > p { margin: 10px 0; font-size: 22px; line-height: 1.65; }
+.watchbook-dossier section > p:not(.watchbook-history) { gap: 10px; }
+.watchbook-dossier .tag { padding: 5px 8px; font-size: 18px; }
+.watchbook-note-title button { font-size: 21px; }
+.watchbook-history { padding-left: 0; }
+.watchbook-history time { position: static; display: block; margin-bottom: 5px; }
+.watchbook-history-list { gap: 12px; font-size: 21px; }
+.watchbook-history-list li { grid-template-columns: 82px 1fr auto; }
+.watchbook-detail { gap: 10px; margin-top: 26px; padding: 18px; font-size: 23px; }
+.watchbook-detail svg { width: 28px; height: 28px; }
+.watchbook-footer-tools { gap: 14px; min-width: 1500px; margin-top: 16px; }
+.watchbook-footer-tools label,
+.watchbook-footer-tools button { gap: 8px; padding: 10px 14px; font-size: 21px; }
+.watchbook-page .mock-note { min-width: 1500px; margin-top: 12px; font-size: 20px; line-height: 1.5; }
+
+@media (max-width: 2200px) {
+  .watchbook-layout { grid-template-columns: 300px minmax(1500px,1fr); min-width: 1800px; }
+  .watchbook-dossier { grid-column: 1 / -1; border-top: 1px solid var(--watch-rule); border-left: 0; }
+}
+
 @media (max-width: 1450px) {
   .paper-kpi-strip > div { padding: 13px 12px; }
   .paper-kpi-strip strong { font-size: 20px; }

@@ -20,7 +20,7 @@ export function ThemePlanet({
       <small className="planet-leader">领涨股：{summary.leader.symbol} {formatSignedPct(summary.leader.changePct)}</small>
       <div className="planet-detail">
         <span>{summary.group.description}</span>
-        <span>Top 50 入选 {summary.top50Count} 只</span>
+        <span>自选池 Top 50 入选 {summary.top50Count} 只</span>
         <span>集中度 {summary.concentration}%</span>
         <span>领跌股 {summary.laggard.symbol} {formatSignedPct(summary.laggard.changePct)}</span>
       </div>
