@@ -28,6 +28,24 @@ function reasonFor(summary: ThemeGroupSummary, tier: ObservationTier) {
   return "热度回落，短期观望";
 }
 
+function tierForStock(stock: StockQuoteMock): ObservationTier {
+  const dollarVolume = stock.dollarVolume ?? calculateDollarVolume(stock.price, stock.volume);
+  const previousDollarVolume = stock.previousDollarVolume ?? calculateDollarVolume(stock.price, stock.previousVolume);
+  const heat = dollarVolume / Math.max(previousDollarVolume, 1);
+  if ((stock.changePct >= 1 && heat >= 1.05) || heat >= 1.2) return "必须关注";
+  if (stock.changePct >= 0 || heat >= 0.95) return "持续观察";
+  return "暂时降温";
+}
+
+function reasonForStock(stock: StockQuoteMock, tier: ObservationTier) {
+  const dollarVolume = stock.dollarVolume ?? calculateDollarVolume(stock.price, stock.volume);
+  const previousDollarVolume = stock.previousDollarVolume ?? calculateDollarVolume(stock.price, stock.previousVolume);
+  const heat = dollarVolume / Math.max(previousDollarVolume, 1);
+  if (tier === "必须关注") return heat >= 1.2 ? "成交显著放大，资金活跃" : "个股上涨且量能配合";
+  if (tier === "持续观察") return heat >= 0.95 ? "量能平稳，等待方向确认" : "趋势尚好，等待量能确认";
+  return "热度回落，短期观望";
+}
+
 function signalScore(summary: ThemeGroupSummary) {
   const heat = summary.dollarVolume / Math.max(summary.previousDollarVolume, 1);
   const top50Share = summary.top50Count / Math.max(summary.stocks.length, 1);
@@ -47,7 +65,7 @@ export function MonitoringGroupsPage() {
   const top50 = useMemo(() => topVolumeService.getComparison(stocks), [stocks]);
   const top50Symbols = useMemo(() => new Set(top50.currentTop50.map((entry) => entry.symbol)), [top50.currentTop50]);
   const summaries = useMemo(() => marketDataService.getThemeGroupSummaries(top50Symbols, stocks), [top50Symbols, stocks]);
-  const [selectedId, setSelectedId] = useState<string>(() => summaries[0]?.group.id || "");
+  const [selectedId, setSelectedId] = useState("");
   const [selectedStock, setSelectedStock] = useState<StockQuoteMock>();
   const [focusOnly, setFocusOnly] = useState(false);
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection }>({ key: "changePct", direction: "desc" });
@@ -74,7 +92,18 @@ export function MonitoringGroupsPage() {
   })), [stocks]);
   const previousTop50Symbols = useMemo(() => new Set(topVolumeService.getCurrentTop50(previousStocks).map((entry) => entry.symbol)), [previousStocks]);
   const previousSummaries = useMemo(() => marketDataService.getThemeGroupSummaries(previousTop50Symbols, previousStocks), [previousTop50Symbols, previousStocks]);
-  const visibleObservations = focusOnly ? observations.filter((item) => item.tier === "必须关注") : observations;
+  const scopedObservations = useMemo(() => {
+    if (!selectedId) return observations;
+    const summary = summaries.find((item) => item.group.id === selectedId);
+    if (!summary) return observations;
+    return summary.stocks.map((stock) => {
+      const tier = tierForStock(stock);
+      const dollarVolume = stock.dollarVolume ?? calculateDollarVolume(stock.price, stock.volume);
+      const previousDollarVolume = stock.previousDollarVolume ?? calculateDollarVolume(stock.price, stock.previousVolume);
+      return { summary, stock, tier, reason: reasonForStock(stock, tier), heat: calculateVolumeHeat(dollarVolume, previousDollarVolume), topRow: topRowsBySymbol.get(stock.symbol) };
+    });
+  }, [observations, selectedId, summaries, topRowsBySymbol]);
+  const visibleObservations = focusOnly ? scopedObservations.filter((item) => item.tier === "必须关注") : scopedObservations;
   const strongest = [...observations].sort((a, b) => signalScore(b.summary) - signalScore(a.summary))[0];
   const tierCounts = (tier: ObservationTier) => observations.filter((item) => item.tier === tier).length;
   const previousTierCounts = (tier: ObservationTier) => previousSummaries.filter((summary) => tierFor(summary) === tier).length;
@@ -130,7 +159,7 @@ export function MonitoringGroupsPage() {
         <aside className="watchbook-group-index">
           <div className="watchbook-panel-head"><h2>自选监控组</h2><button aria-label="刷新" disabled={loading} onClick={() => void refresh(true)}><RefreshCw size={15} /></button></div>
           <button className={!selectedId ? "active" : ""} onClick={() => setSelectedId("")}><span>全部观察</span><b>{summaries.length}</b></button>
-          {summaries.map((summary) => <button key={summary.group.id} className={selected.group.id === summary.group.id ? "active" : ""} onClick={() => setSelectedId(summary.group.id)}><span>{summary.group.name}</span><b>{summary.stocks.length}</b></button>)}
+          {summaries.map((summary) => <button key={summary.group.id} className={selectedId === summary.group.id ? "active" : ""} onClick={() => setSelectedId(summary.group.id)}><span>{summary.group.name}</span><b>{summary.stocks.length}</b></button>)}
           <button className="watchbook-new-group">＋ 新建分组</button>
           <div className="watchbook-index-actions"><button><Settings2 size={14} /> 管理</button><button disabled={loading} onClick={() => void refresh(true)}><RefreshCw size={14} /> {loading ? "更新中" : "刷新"}</button></div>
         </aside>
@@ -161,7 +190,7 @@ export function MonitoringGroupsPage() {
             return <section className={`watchbook-tier tier-${tier}`} key={tier}>
               <header><i /><h3>{tier}（{rows.length}）</h3><span>{tier === "必须关注" ? "信号最强，短线资金活跃" : tier === "持续观察" ? "趋势尚好，等待确认" : "热度回落，短期观望"}</span></header>
               <div className="watchbook-table-head"><span>{sortHeader("标的", "symbol")}</span><span>关注理由</span><span>{sortHeader("今日 / 昨日涨跌", "changePct")}</span><span>{sortHeader("成交额", "dollarVolume")}</span><span>{sortHeader("热度比例", "heat")}</span><span>{sortHeader("自选池排名", "rank")}</span><span>状态</span></div>
-              {sortedRows.map(({ summary, stock, reason, heat, topRow }) => <div className="watchbook-row" role="button" tabIndex={0} key={summary.group.id} onClick={() => { setSelectedId(summary.group.id); setSelectedStock(stock); }} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { setSelectedId(summary.group.id); setSelectedStock(stock); } }}>
+              {sortedRows.map(({ summary, stock, reason, heat, topRow }) => <div className="watchbook-row" role="button" tabIndex={0} key={`${summary.group.id}-${stock.symbol}`} onClick={() => { setSelectedId(summary.group.id); setSelectedStock(stock); }} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { setSelectedId(summary.group.id); setSelectedStock(stock); } }}>
                 <span className="watchbook-target"><Star size={14} /><b>{stock.symbol}</b><small>{stock.companyName}</small></span>
                 <span>{reason}</span>
                 <span><b className={stock.changePct >= 0 ? "positive" : "negative"}>{formatSignedPct(stock.changePct)}</b><small className={stock.previousChangePct >= 0 ? "positive" : "negative"}>{formatSignedPct(stock.previousChangePct)}</small></span>
