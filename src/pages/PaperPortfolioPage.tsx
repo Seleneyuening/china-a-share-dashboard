@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Activity, Bot, ChevronRight, Download, Eye, RefreshCw, ShieldCheck, Sparkles, Wallet } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { emptyPortfolioState, loadPortfolioState, type SupabasePortfolioState } from "../services/supabasePortfolioService";
+import { emptyPortfolioState, loadPortfolioState, type PortfolioAccountId, type SupabasePortfolioState } from "../services/supabasePortfolioService";
 import { formatCompactMoney, formatSignedPct } from "../utils/format";
 
 const baseGrid = { stroke: "#203345", strokeDasharray: "3 3" };
@@ -17,16 +17,17 @@ function money(value: number) {
   return `¥${value.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-export function PaperPortfolioPage() {
-  const [state, setState] = useState<SupabasePortfolioState>(() => emptyPortfolioState());
+export function PaperPortfolioPage({ accountId = "main" }: { accountId?: PortfolioAccountId }) {
+  const isEtf = accountId === "etf";
+  const [state, setState] = useState<SupabasePortfolioState>(() => emptyPortfolioState(accountId));
   const [loading, setLoading] = useState(true);
   const [range, setRange] = useState<"5D" | "10D" | "30D" | "ALL">("5D");
 
   const refresh = useCallback(async () => {
     setLoading(true);
-    setState(await loadPortfolioState());
+    setState(await loadPortfolioState(accountId));
     setLoading(false);
-  }, []);
+  }, [accountId]);
 
   useEffect(() => { void refresh(); }, [refresh]);
 
@@ -44,7 +45,7 @@ export function PaperPortfolioPage() {
     const url = URL.createObjectURL(new Blob([payload], { type: "application/json" }));
     const link = document.createElement("a");
     link.href = url;
-    link.download = `a-share-paper-account-${new Date().toISOString().slice(0, 10)}.json`;
+    link.download = `${isEtf ? "etf" : "a-share"}-paper-account-${new Date().toISOString().slice(0, 10)}.json`;
     link.click();
     URL.revokeObjectURL(url);
   }
@@ -52,7 +53,7 @@ export function PaperPortfolioPage() {
   return (
     <section className="paper-overview-page">
       <div className="paper-page-toolbar">
-        <div className="paper-date">2026-07-16（今日）</div>
+        <div className="paper-date">{new Date().toLocaleDateString("zh-CN", { timeZone: "Asia/Shanghai" })}（今日）{isEtf ? " · ETF虚拟账户" : ""}</div>
         <button className="ghost-button" onClick={exportSummary}><Download size={15} /> 导出简报</button>
         <button className="icon-button" disabled={loading} onClick={() => void refresh()} aria-label="刷新账户"><RefreshCw size={16} /></button>
       </div>
@@ -100,8 +101,8 @@ export function PaperPortfolioPage() {
             <div><span>当日风险信号</span><strong>0</strong><small className="positive">无</small></div>
           </div>
           <div className="paper-rules-box">
-            <strong>全自动虚拟交易</strong>
-            <p>25 只核心股票 + 50 只动态候选 · 10 只行业 ETF 判断市场风向 · 自动买入、卖出与调整参数，无需人工确认。</p>
+            <strong>{isEtf ? "ETF 全自动虚拟交易" : "全自动虚拟交易"}</strong>
+            <p>{isEtf ? "仅扫描并交易 10 只核心 ETF · 延续原账户的市场、评分、仓位、止盈止损与自动进化逻辑 · 禁止买入个股。" : "25 只核心股票 + 50 只动态候选 · 10 只行业 ETF 判断市场风向 · 自动买入、卖出与调整参数，无需人工确认。"}</p>
           </div>
           <button className="paper-primary-action"><Sparkles size={16} /> 查看今日策略</button>
           <button className="paper-secondary-action"><Bot size={16} /> 策略助手</button>
@@ -117,7 +118,7 @@ export function PaperPortfolioPage() {
               const pnl = value - position.quantity * position.averagePrice;
               const pnlPct = (position.lastPrice / position.averagePrice - 1) * 100;
               return <tr key={position.symbol}><td>{position.symbol}</td><td><b>{position.companyName}</b></td><td>{position.quantity} / {position.quantity}</td><td>{position.lastPrice.toFixed(2)}</td><td>{position.averagePrice.toFixed(2)}</td><td>{money(value)}</td><td className={pnl >= 0 ? "positive" : "negative"}>{pnl >= 0 ? "+" : ""}{money(pnl)}</td><td className={pnlPct >= 0 ? "positive" : "negative"}>{formatSignedPct(pnlPct)}</td><td>{state.equity ? (value / state.equity * 100).toFixed(2) : "0.00"}%</td></tr>;
-            }) : <tr className="paper-empty-row"><td colSpan={9}>全自动操盘引擎将在下一交易时段寻找第一笔虚拟持仓</td></tr>}
+            }) : <tr className="paper-empty-row"><td colSpan={9}>{isEtf ? "ETF 操盘引擎将在下一交易时段寻找第一笔虚拟 ETF 持仓" : "全自动操盘引擎将在下一交易时段寻找第一笔虚拟持仓"}</td></tr>}
           </tbody></table></div>
           <button className="paper-text-link">查看全部持仓 <ChevronRight size={14} /></button>
         </article>
@@ -127,12 +128,12 @@ export function PaperPortfolioPage() {
           <div className="paper-trade-list">
             {state.trades.length ? state.trades.slice(-5).reverse().map((trade) => <button key={trade.id}>
               <time>{formatTime(trade.occurredAt)}</time><i className={trade.side === "买入" ? "buy" : "sell"} /><strong className={trade.side === "买入" ? "positive" : "negative"}>{trade.side}</strong><span>{trade.symbol} {trade.companyName}</span><em>{trade.quantity} 股</em><b>{money(trade.quantity * trade.price + trade.fee)}</b>
-            </button>) : <div className="paper-empty-trades"><Wallet size={22} /><span>暂无虚拟成交，账户仍在观察市场。</span></div>}
+            </button>) : <div className="paper-empty-trades"><Wallet size={22} /><span>暂无虚拟成交，{isEtf ? "ETF " : ""}账户仍在观察市场。</span></div>}
           </div>
         </article>
       </div>
 
-      <p className="mock-note">系统只操作虚拟账户，不连接券商；买卖与策略调整自动执行，仅用于模拟研究，不构成投资建议，也不保证盈利。</p>
+      <p className="mock-note">系统只操作{isEtf ? " ETF " : ""}虚拟账户，不连接券商；买卖与策略调整自动执行，仅用于模拟研究，不构成投资建议，也不保证盈利。</p>
     </section>
   );
 }

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Banknote, BookOpenText, Download, RefreshCw, Search, TrendingUp, WalletCards } from "lucide-react";
-import { emptyPortfolioState, loadPortfolioState, type SupabasePortfolioState, type LiveTrade } from "../services/supabasePortfolioService";
+import { emptyPortfolioState, loadPortfolioState, type PortfolioAccountId, type SupabasePortfolioState, type LiveTrade } from "../services/supabasePortfolioService";
 import { formatCompactMoney, formatSignedPct } from "../utils/format";
 
 function formatMoney(value: number) {
@@ -28,12 +28,13 @@ function buildClosedRecords(trades: LiveTrade[]): ClosedRecord[] {
   return closed.reverse();
 }
 
-export function PortfolioRecordPage() {
-  const [state, setState] = useState<SupabasePortfolioState>(() => emptyPortfolioState());
+export function PortfolioRecordPage({ accountId = "main" }: { accountId?: PortfolioAccountId }) {
+  const isEtf = accountId === "etf";
+  const [state, setState] = useState<SupabasePortfolioState>(() => emptyPortfolioState(accountId));
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [tradeSide, setTradeSide] = useState<"全部" | "买入" | "卖出">("全部");
-  const refresh = useCallback(async () => { setLoading(true); setState(await loadPortfolioState()); setLoading(false); }, []);
+  const refresh = useCallback(async () => { setLoading(true); setState(await loadPortfolioState(accountId)); setLoading(false); }, [accountId]);
   useEffect(() => { void refresh(); }, [refresh]);
 
   const positionValue = state.positions.reduce((sum, position) => sum + position.quantity * position.lastPrice, 0);
@@ -51,18 +52,18 @@ export function PortfolioRecordPage() {
     const rows = [["时间", "操作", "股票代码", "股票名称", "数量", "成交价", "成交金额", "费用", "已实现盈亏", "决定依据"], ...state.trades.map((trade) => [formatTime(trade.occurredAt), trade.side, trade.symbol, trade.companyName, trade.quantity, trade.price, (trade.quantity * trade.price).toFixed(2), trade.fee, trade.realizedPnl ?? "", trade.reason])];
     const csv = `\uFEFF${rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n")}`;
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-    const link = document.createElement("a"); link.href = url; link.download = "A股真实行情虚拟交易记录.csv"; link.click(); URL.revokeObjectURL(url);
+    const link = document.createElement("a"); link.href = url; link.download = `${isEtf ? "ETF" : "A股"}真实行情虚拟交易记录.csv`; link.click(); URL.revokeObjectURL(url);
   }
 
   return <section className="v2-page portfolio-record-page">
-    <div className="v2-hero record-hero"><div><span className="tag green"><BookOpenText size={14} /> Supabase 虚拟账户</span><h1>资金与交易记录</h1><p>全自动记录真实时间下的虚拟资金、持仓、成交、费用和盈亏；所有买卖均无需人工确认。</p></div><div className="record-actions"><button className="ghost-button" onClick={exportTrades}><Download size={16} /> 导出记录</button><button className="status" disabled={loading} onClick={() => void refresh()}><RefreshCw size={16} /> {loading ? "读取中" : "刷新记录"}</button></div></div>
+    <div className="v2-hero record-hero"><div><span className="tag green"><BookOpenText size={14} /> Supabase {isEtf ? "ETF " : ""}虚拟账户</span><h1>{isEtf ? "ETF " : ""}资金与交易记录</h1><p>全自动记录真实时间下的虚拟资金、持仓、成交、费用和盈亏；{isEtf ? "账户只允许买卖 ETF，" : ""}所有交易均无需人工确认。</p></div><div className="record-actions"><button className="ghost-button" onClick={exportTrades}><Download size={16} /> 导出记录</button><button className="status" disabled={loading} onClick={() => void refresh()}><RefreshCw size={16} /> {loading ? "读取中" : "刷新记录"}</button></div></div>
 
     <div className="v2-card record-filter-bar"><label><Search size={16} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索股票代码或名称" /></label><label><span>资金流水</span><select value={tradeSide} onChange={(event) => setTradeSide(event.target.value as typeof tradeSide)}><option>全部</option><option>买入</option><option>卖出</option></select></label></div>
 
     <div className="record-stat-grid">
       <div className="v2-card auto-stat"><WalletCards /><span>当前总资产</span><strong>{formatCompactMoney(state.equity)}</strong><small>累计 {formatSignedPct(cumulativeReturn)}</small></div>
       <div className="v2-card auto-stat"><Banknote /><span>剩余可用资金</span><strong>{formatCompactMoney(state.cash)}</strong><small>资金占比 {state.equity ? ((state.cash / state.equity) * 100).toFixed(1) : "0.0"}%</small></div>
-      <div className="v2-card auto-stat"><TrendingUp /><span>当前持仓市值</span><strong>{formatCompactMoney(positionValue)}</strong><small>{state.positions.length} 只股票</small></div>
+      <div className="v2-card auto-stat"><TrendingUp /><span>当前持仓市值</span><strong>{formatCompactMoney(positionValue)}</strong><small>{state.positions.length} 只{isEtf ? " ETF" : "股票"}</small></div>
       <div className="v2-card auto-stat"><BookOpenText /><span>累计总盈亏</span><strong className={state.equity >= state.initialCapital ? "positive" : "negative"}>{formatCompactMoney(state.equity - state.initialCapital)}</strong><small>已实现 {formatCompactMoney(realizedPnl)} · 浮盈亏 {formatCompactMoney(unrealizedPnl)}</small></div>
     </div>
 
@@ -76,6 +77,6 @@ export function PortfolioRecordPage() {
     <div className="v2-card"><div className="v2-card-head"><div><h2>已完成买卖</h2><small>一行对应一次真实时间下的完整虚拟交易</small></div></div>{closedRecords.length ? <div className="table-scroll"><table className="stock-table record-table"><thead><tr><th>股票</th><th>买入时间</th><th>卖出时间</th><th>数量</th><th>买入金额</th><th>卖出金额</th><th>已实现盈亏</th><th>卖出原因</th></tr></thead><tbody>{closedRecords.map(({ buy, sell }) => <tr key={sell.id}><td><b>{sell.symbol}</b><small>{sell.companyName}</small></td><td>{formatTime(buy.occurredAt)}</td><td>{formatTime(sell.occurredAt)}</td><td>{sell.quantity.toLocaleString("zh-CN")} 股</td><td>{formatMoney(buy.quantity * buy.price)}</td><td>{formatMoney(sell.quantity * sell.price)}</td><td className={(sell.realizedPnl ?? 0) >= 0 ? "positive" : "negative"}>{formatMoney(sell.realizedPnl ?? 0)}</td><td>{sell.reason}</td></tr>)}</tbody></table></div> : <p className="muted-note">还没有完成卖出的交易。</p>}</div>
 
     <div className="v2-card"><div className="v2-card-head"><div><h2>逐笔资金流水</h2><small>共 {state.trades.length} 笔，最新记录在前</small></div></div>{trades.length ? <div className="table-scroll"><table className="stock-table record-table"><thead><tr><th>时间</th><th>操作</th><th>股票</th><th>数量</th><th>成交价</th><th>成交金额</th><th>费用</th><th>决定依据</th></tr></thead><tbody>{trades.map((trade) => <tr key={trade.id}><td>{formatTime(trade.occurredAt)}</td><td><span className={`tag ${trade.side === "买入" ? "green" : "red"}`}>{trade.side}</span></td><td><b>{trade.symbol}</b><small>{trade.companyName}</small></td><td>{trade.quantity.toLocaleString("zh-CN")} 股</td><td>{formatMoney(trade.price)}</td><td>{formatMoney(trade.quantity * trade.price)}</td><td>{formatMoney(trade.fee)}</td><td>{trade.reason}</td></tr>)}</tbody></table></div> : <p className="muted-note">暂无资金流水。</p>}</div>
-    <p className="mock-note">账户使用真实行情和真实时间，所有虚拟买卖均由系统自动执行；不连接券商，也不会提交真实订单。</p>
+    <p className="mock-note">账户使用真实行情和真实时间，所有{isEtf ? " ETF " : "虚拟"}买卖均由系统自动执行；不连接券商，也不会提交真实订单。</p>
   </section>;
 }

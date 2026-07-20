@@ -1,4 +1,4 @@
-import { Activity, Bell, Eye, FlaskConical, Flower2, History, LayoutGrid, LineChart as LineIcon, Moon, RefreshCw, Sun, Wallet } from "lucide-react";
+import { Activity, Bell, Eye, FlaskConical, Flower2, History, LayoutGrid, LineChart as LineIcon, Moon, RefreshCw, Sun, Wallet, WalletCards } from "lucide-react";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import {
   Area,
@@ -39,7 +39,7 @@ import { alertStorage } from "./services/alertStorage";
 import { bySymbol, calculateCorrelation, calculateRelativeStrength, calculateReturn, getMarketStatus, metaFor, normalizeSeriesToBase100, signed } from "./services/calculations";
 import type { IndexMeta, Point, RangeKey } from "./types";
 
-type Page = "overview" | "marketAnalysis" | "opportunityRadar" | "marketReplay" | "strategyResearch" | "virtualAccount" | "alerts";
+type Page = "overview" | "marketAnalysis" | "opportunityRadar" | "marketReplay" | "strategyResearch" | "virtualAccount" | "etfVirtualAccount" | "alerts";
 type MarketAnalysisTab = "intraday" | "overlay" | "compare";
 type OpportunityTab = "monitoringGroups" | "themeSolarSystem" | "themeTop50" | "anomalyRadar";
 type ReplayTab = "marketJournal" | "historyReplay";
@@ -53,6 +53,7 @@ const navItems: Array<{ id: Page; label: string; icon: typeof LayoutGrid; group:
   { id: "marketReplay", label: "市场复盘", icon: History, group: "研究工具" },
   { id: "strategyResearch", label: "策略研究", icon: FlaskConical, group: "研究工具" },
   { id: "virtualAccount", label: "虚拟账户", icon: Wallet, group: "虚拟账户" },
+  { id: "etfVirtualAccount", label: "ETF虚拟账户", icon: WalletCards, group: "虚拟账户" },
 ];
 
 const marketAnalysisTabs: Array<{ id: MarketAnalysisTab; label: string }> = [{ id: "intraday", label: "个股分时" }, { id: "overlay", label: "指数叠加" }, { id: "compare", label: "对比分析" }];
@@ -82,6 +83,7 @@ const pageAliases: Record<string, Page> = {
   marketReplay: "marketReplay",
   strategyResearch: "strategyResearch",
   virtualAccount: "virtualAccount",
+  etfVirtualAccount: "etfVirtualAccount",
   intraday: "marketAnalysis",
   overlay: "marketAnalysis",
   compare: "marketAnalysis",
@@ -96,6 +98,8 @@ const pageAliases: Record<string, Page> = {
   paperPortfolio: "virtualAccount",
   portfolioRecord: "virtualAccount",
   portfolioCommand: "virtualAccount",
+  etfPaperPortfolio: "etfVirtualAccount",
+  etfPortfolioRecord: "etfVirtualAccount",
   alerts: "alerts",
 };
 
@@ -122,7 +126,7 @@ function App() {
   const [opportunityTab, setOpportunityTab] = useState<OpportunityTab>(() => requestedPage === "themeSolarSystem" || requestedPage === "themeTop50" || requestedPage === "anomalyRadar" ? requestedPage : "monitoringGroups");
   const [replayTab, setReplayTab] = useState<ReplayTab>(() => requestedPage === "historyReplay" ? "historyReplay" : "marketJournal");
   const [strategyTab, setStrategyTab] = useState<StrategyTab>(() => requestedPage === "strategyLab" ? "strategyLab" : "patternLab");
-  const [accountTab, setAccountTab] = useState<AccountTab>(() => requestedPage === "portfolioRecord" ? "portfolioRecord" : "paperPortfolio");
+  const [accountTab, setAccountTab] = useState<AccountTab>(() => requestedPage === "portfolioRecord" || requestedPage === "etfPortfolioRecord" ? "portfolioRecord" : "paperPortfolio");
   const [selectedSymbol, setSelectedSymbol] = useState("000001.SH");
   const [range, setRange] = useState<RangeKey>("1D");
   const [showPrevClose, setShowPrevClose] = useState(true);
@@ -249,6 +253,11 @@ function App() {
           <WorkspaceTabs label="虚拟账户视图" active={accountTab} onChange={setAccountTab} tabs={accountTabs} />
           {accountTab === "paperPortfolio" && <PaperPortfolioPage />}
           {accountTab === "portfolioRecord" && <PortfolioRecordPage />}
+        </>}
+        {page === "etfVirtualAccount" && <>
+          <WorkspaceTabs label="ETF虚拟账户视图" active={accountTab} onChange={setAccountTab} tabs={accountTabs} />
+          {accountTab === "paperPortfolio" && <PaperPortfolioPage accountId="etf" />}
+          {accountTab === "portfolioRecord" && <PortfolioRecordPage accountId="etf" />}
         </>}
         {page === "alerts" && <AlertsPage />}
 
