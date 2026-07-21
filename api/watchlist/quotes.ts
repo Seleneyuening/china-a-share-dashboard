@@ -1,4 +1,5 @@
 import { stockQuoteMocks } from "../../src/data/mockQuotes.js";
+import { fetchLongbridgeWatchlist } from "../_lib/longbridgeAshare.js";
 
 type YahooResult = {
   meta?: {
@@ -79,6 +80,22 @@ async function mapWithConcurrency<T, R>(items: T[], limit: number, worker: (item
 export const config = { maxDuration: 60 };
 
 export async function getWatchlistPayload() {
+  try {
+    const longbridge = await Promise.race([
+      fetchLongbridgeWatchlist(stockQuoteMocks.map((stock) => stock.symbol)),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Longbridge timeout")), 18_000)),
+    ]);
+    const receivedSymbols = new Set(longbridge.items.map((item) => item.symbol));
+    return {
+      source: "longbridge" as const,
+      updatedAt: longbridge.updatedAt,
+      coverage: { received: longbridge.items.length, expected: stockQuoteMocks.length },
+      missingSymbols: stockQuoteMocks.filter((stock) => !receivedSymbols.has(stock.symbol)).map((stock) => stock.symbol),
+      items: longbridge.items,
+    };
+  } catch (error) {
+    console.warn("[watchlist] Longbridge unavailable, using Yahoo:", error instanceof Error ? error.message : String(error));
+  }
   const settled = await mapWithConcurrency(stockQuoteMocks, 8, (stock) => fetchQuote(stock.symbol));
   const items = settled.flatMap((result) => result.status === "fulfilled" ? [result.value] : []);
   const receivedSymbols = new Set(items.map((item) => item.symbol));

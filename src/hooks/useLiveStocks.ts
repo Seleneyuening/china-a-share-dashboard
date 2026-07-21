@@ -3,7 +3,7 @@ import { marketDataService } from "../services/marketDataService";
 import type { StockQuoteMock } from "../types/themeGroup";
 
 type WatchlistPayload = {
-  source: "yahoo";
+  source: "longbridge" | "yahoo";
   updatedAt: string;
   coverage: { received: number; expected: number };
   items: Array<Pick<StockQuoteMock, "symbol" | "price" | "volume" | "previousVolume" | "dollarVolume" | "previousDollarVolume" | "changePct" | "previousChangePct" | "sparkline">>;
@@ -28,11 +28,11 @@ export function useLiveStocks() {
       const liveBySymbol = new Map(payload.items.map((item) => [item.symbol, item]));
       const merged = marketDataService.getStockQuotes().flatMap((fallback) => {
         const live = liveBySymbol.get(fallback.symbol);
-        return live ? [{ ...fallback, ...live, source: "yahoo" as const }] : [];
+        return live ? [{ ...fallback, ...live, source: payload.source }] : [];
       });
       if (!mounted.current) return;
       setStocks(merged);
-      setSource(`Yahoo 延迟行情 · ${payload.coverage.received}/${payload.coverage.expected}`);
+      setSource(`${payload.source === "longbridge" ? "长桥行情" : "Yahoo 延迟行情"} · ${payload.coverage.received}/${payload.coverage.expected}`);
       setUpdatedAt(new Date(payload.updatedAt).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Shanghai" }));
       setError(payload.coverage.received < payload.coverage.expected ? `${payload.coverage.expected - payload.coverage.received} 只股票暂停或暂缺行情` : undefined);
     } catch (cause) {

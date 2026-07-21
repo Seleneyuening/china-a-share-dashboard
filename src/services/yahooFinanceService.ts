@@ -56,7 +56,7 @@ function pointsFrom(result: YahooResult, format: "time" | "date" = "time"): Poin
     .filter((point): point is Point => Boolean(point));
 }
 
-function quoteFrom(symbol: string, result: YahooResult, intraday: Point[]): Quote {
+function quoteFrom(symbol: string, result: YahooResult, intraday: Point[], provider: "longbridge" | "yahoo"): Quote {
   const fallback = fallbackBySymbol[symbol];
   const current = result.meta?.regularMarketPrice ?? intraday[intraday.length - 1]?.value;
   const previousClose = result.meta?.previousClose ?? result.meta?.chartPreviousClose;
@@ -77,35 +77,38 @@ function quoteFrom(symbol: string, result: YahooResult, intraday: Point[]): Quot
     high: Number((highs.length ? Math.max(...highs) : current).toFixed(2)),
     low: Number((lows.length ? Math.min(...lows) : current).toFixed(2)),
     previousClose: Number(previousClose.toFixed(2)),
-    updatedAt: `${formatShanghaiTime(result.meta?.regularMarketTime)} · Yahoo 延迟行情`,
+    updatedAt: `${formatShanghaiTime(result.meta?.regularMarketTime)} · ${provider === "longbridge" ? "长桥行情" : "Yahoo 延迟行情"}`,
   };
 }
 
-async function fetchChart(yahooSymbol: string, range: string, interval: string): Promise<YahooResult> {
+async function fetchChart(yahooSymbol: string, range: string, interval: string): Promise<{ result: YahooResult; provider: "longbridge" | "yahoo" }> {
   const response = await fetch(`/api/yahoo/chart?symbol=${encodeURIComponent(yahooSymbol)}&range=${range}&interval=${interval}`, { cache: "no-store" });
   if (!response.ok) throw new Error(`Quote request failed: ${response.status}`);
   const body = await response.json();
   const result = body?.chart?.result?.[0] as YahooResult | undefined;
   if (!result) throw new Error(body?.chart?.error?.description || "Quote response is empty");
-  return result;
+  return { result, provider: body?.provider === "longbridge" ? "longbridge" : "yahoo" };
 }
 
 export async function getYahooSnapshot(): Promise<MarketDataSnapshot> {
   const pairs = await Promise.all(indexes.map(async (index) => {
     const yahooSymbol = yahooSymbols[index.symbol];
     if (!yahooSymbol) throw new Error(`Missing Yahoo symbol mapping for ${index.symbol}`);
-    const [oneDay, oneYear] = await Promise.all([
+    const [oneDayResponse, oneYearResponse] = await Promise.all([
       fetchChart(yahooSymbol, "1d", "5m"),
       fetchChart(yahooSymbol, "1y", "1d"),
     ]);
+    const oneDay = oneDayResponse.result;
+    const oneYear = oneYearResponse.result;
     const intraday = pointsFrom(oneDay);
     if (!intraday.length) throw new Error(`No intraday points for ${index.symbol}`);
-    const quote = quoteFrom(index.symbol, oneDay, intraday);
+    const quote = quoteFrom(index.symbol, oneDay, intraday, oneDayResponse.provider);
     const historical = pointsFrom(oneYear, "date");
     return [index.symbol, {
       quote,
       intraday,
       historical: historical.length ? historical : mockHistorical[index.symbol] || [],
+      provider: oneDayResponse.provider === "longbridge" && oneYearResponse.provider === "longbridge" ? "longbridge" as const : "yahoo" as const,
     }] as const;
   }));
 
@@ -113,7 +116,7 @@ export async function getYahooSnapshot(): Promise<MarketDataSnapshot> {
     quotes: pairs.map(([, data]) => data.quote),
     intraday: Object.fromEntries(pairs.map(([symbol, data]) => [symbol, data.intraday])),
     historical: Object.fromEntries(pairs.map(([symbol, data]) => [symbol, data.historical])),
-    source: "yahoo",
+    source: pairs.every(([, data]) => data.provider === "longbridge") ? "longbridge" : "yahoo",
     fetchedAt: new Date().toISOString(),
   };
 }

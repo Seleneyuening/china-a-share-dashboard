@@ -29,7 +29,7 @@ export type StockQuoteMock = {
   changePct: number;
   previousChangePct: number;
   sparkline: number[];
-  source?: "mock" | "yahoo";
+  source?: "mock" | "longbridge" | "yahoo";
 };
 
 export type ThemeGroupSummary = {

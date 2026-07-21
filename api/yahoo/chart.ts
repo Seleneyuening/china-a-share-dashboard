@@ -26,6 +26,18 @@ export default async function handler(
       res.status(400).json({ error: "Unsupported symbol" });
       return;
     }
+    try {
+      const body = await Promise.race([
+        fetchLongbridgeChart(symbol, range),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Longbridge timeout")), 8_000)),
+      ]);
+      res.setHeader("content-type", "application/json; charset=utf-8");
+      res.setHeader("cache-control", range === "1d" ? "s-maxage=60, stale-while-revalidate=180" : "s-maxage=21600, stale-while-revalidate=86400");
+      res.status(200).send(JSON.stringify(body));
+      return;
+    } catch (error) {
+      console.warn("[indexes] Longbridge unavailable, using Yahoo:", error instanceof Error ? error.message : String(error));
+    }
     const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=${range}&interval=${interval}`;
     const response = await fetch(yahooUrl, { headers: { "user-agent": "Mozilla/5.0" } });
     res.setHeader("content-type", "application/json; charset=utf-8");
@@ -35,3 +47,4 @@ export default async function handler(
     res.status(502).json({ error: error instanceof Error ? error.message : String(error) });
   }
 }
+import { fetchLongbridgeChart } from "../_lib/longbridgeAshare.js";

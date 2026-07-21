@@ -212,11 +212,11 @@ async function fetchLongbridgeTopVolume(): Promise<TopVolumePayload> {
   }
   const ctx = await getLongbridgeQuoteContext();
   const [quotes, dailyBySymbol] = await Promise.all([
-    ctx.quote(topVolumeSymbols.map((symbol) => `${symbol}.US`)),
+    ctx.quote(topVolumeSymbols),
     fetchLongbridgeDaily(ctx),
   ]);
   const items = quotes.map((quote: any) => {
-    const symbol = String(quote.symbol || "").replace(/\.US$/, "");
+    const symbol = String(quote.symbol || "");
     const price = Number(quote.lastDone);
     const prevClose = Number(quote.prevClose);
     const daily = dailyBySymbol.get(symbol);
@@ -239,7 +239,7 @@ async function fetchLongbridgeDaily(ctx: any) {
   for (let index = 0; index < topVolumeSymbols.length; index += 10) {
     pairs.push(...await Promise.all(topVolumeSymbols.slice(index, index + 10).map(async (symbol) => {
       try {
-        const rows = await ctx.candlesticks(`${symbol}.US`, 14, 3, 0, 0);
+        const rows = await ctx.candlesticks(symbol, 14, 3, 0, 0);
         const previous = rows[rows.length - 2] as any;
         const beforePrevious = rows[rows.length - 3] as any;
         const previousClose = Number(previous?.close);
