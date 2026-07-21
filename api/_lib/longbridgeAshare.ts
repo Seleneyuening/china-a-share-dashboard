@@ -5,6 +5,12 @@ declare const process: {
 };
 
 let quoteContextPromise: Promise<any> | undefined;
+// Keep SDK const-enum values local so Vercel's isolatedModules build does not
+// access ambient const enums from longbridge/index.d.ts.
+const PERIOD_MIN_5 = 2;
+const PERIOD_DAY = 6;
+const ADJUST_NONE = 0;
+const ADJUST_FORWARD = 1;
 
 function number(value: unknown): number {
   if (typeof value === "object" && value !== null && "toString" in value) {
@@ -67,7 +73,6 @@ export type LongbridgeWatchlistItem = {
 };
 
 export async function fetchLongbridgeWatchlist(symbols: readonly string[]): Promise<{ updatedAt: string; items: LongbridgeWatchlistItem[] }> {
-  const { AdjustType, Period } = await import("longbridge");
   const context = await getQuoteContext();
   const quotes = await context.quote([...symbols]);
   const quoteBySymbol = new Map(quotes.map((quote: any) => [String(quote.symbol), quote]));
@@ -80,7 +85,7 @@ export async function fetchLongbridgeWatchlist(symbols: readonly string[]): Prom
     const dollarVolume = number(quote.turnover);
     if (![price, previousClose, volume, dollarVolume].every(Number.isFinite) || price <= 0 || previousClose <= 0) return null;
 
-    const dailyRows = await context.candlesticks(symbol, Period.Day, 8, AdjustType.ForwardAdjust);
+    const dailyRows = await context.candlesticks(symbol, PERIOD_DAY, 8, ADJUST_FORWARD);
     const quoteDate = shanghaiDate(quote.timestamp instanceof Date ? quote.timestamp : new Date());
     const completed = dailyRows.filter((row: any) => shanghaiDate(row.timestamp) !== quoteDate);
     const previous = completed.at(-1) as any;
@@ -121,16 +126,15 @@ function longbridgeSymbol(symbol: string): string {
 }
 
 export async function fetchLongbridgeChart(symbol: string, range: "1d" | "1y") {
-  const { AdjustType, Period } = await import("longbridge");
   const context = await getQuoteContext();
   const target = longbridgeSymbol(symbol);
   const [quote] = await context.quote([target]);
   if (!quote) throw new Error(`Longbridge quote missing: ${target}`);
   const rows = await context.candlesticks(
     target,
-    range === "1y" ? Period.Day : Period.Min_5,
+    range === "1y" ? PERIOD_DAY : PERIOD_MIN_5,
     range === "1y" ? 260 : 72,
-    range === "1y" ? AdjustType.ForwardAdjust : AdjustType.NoAdjust,
+    range === "1y" ? ADJUST_FORWARD : ADJUST_NONE,
   );
   const quoteDate = shanghaiDate(quote.timestamp instanceof Date ? quote.timestamp : new Date());
   const selectedRows = range === "1d"
