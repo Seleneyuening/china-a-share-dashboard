@@ -17,7 +17,7 @@ function money(value: number) {
   return `¥${value.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-export function PaperPortfolioPage({ accountId = "main" }: { accountId?: PortfolioAccountId }) {
+export function PaperPortfolioPage({ accountId = "main", onOpenRecords }: { accountId?: PortfolioAccountId; onOpenRecords: () => void }) {
   const isEtf = accountId === "etf";
   const [state, setState] = useState<SupabasePortfolioState>(() => emptyPortfolioState(accountId));
   const [loading, setLoading] = useState(true);
@@ -120,11 +120,11 @@ export function PaperPortfolioPage({ accountId = "main" }: { accountId?: Portfol
               return <tr key={position.symbol}><td>{position.symbol}</td><td><b>{position.companyName}</b></td><td>{position.quantity} / {position.quantity}</td><td>{position.lastPrice.toFixed(2)}</td><td>{position.averagePrice.toFixed(2)}</td><td>{money(value)}</td><td className={pnl >= 0 ? "positive" : "negative"}>{pnl >= 0 ? "+" : ""}{money(pnl)}</td><td className={pnlPct >= 0 ? "positive" : "negative"}>{formatSignedPct(pnlPct)}</td><td>{state.equity ? (value / state.equity * 100).toFixed(2) : "0.00"}%</td></tr>;
             }) : <tr className="paper-empty-row"><td colSpan={9}>{isEtf ? "ETF 操盘引擎将在下一交易时段寻找第一笔虚拟 ETF 持仓" : "全自动操盘引擎将在下一交易时段寻找第一笔虚拟持仓"}</td></tr>}
           </tbody></table></div>
-          <button className="paper-text-link">查看全部持仓 <ChevronRight size={14} /></button>
+          <button className="paper-text-link" onClick={onOpenRecords}>查看全部持仓 <ChevronRight size={14} /></button>
         </article>
 
         <article className="v2-card paper-trades-card">
-          <div className="paper-section-head"><h2>最近虚拟交易记录</h2><button className="paper-text-link">查看全部 <ChevronRight size={14} /></button></div>
+          <div className="paper-section-head"><h2>最近虚拟交易记录</h2><button className="paper-text-link" onClick={onOpenRecords}>查看全部 <ChevronRight size={14} /></button></div>
           <div className="paper-trade-list">
             {state.trades.length ? state.trades.slice(-5).reverse().map((trade) => <button key={trade.id}>
               <time>{formatTime(trade.occurredAt)}</time><i className={trade.side === "买入" ? "buy" : "sell"} /><strong className={trade.side === "买入" ? "positive" : "negative"}>{trade.side}</strong><span>{trade.symbol} {trade.companyName}</span><em>{trade.quantity} 股</em><b>{money(trade.quantity * trade.price + trade.fee)}</b>

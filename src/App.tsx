@@ -251,12 +251,12 @@ function App() {
         </>}
         {page === "virtualAccount" && <>
           <WorkspaceTabs label="虚拟账户视图" active={accountTab} onChange={setAccountTab} tabs={accountTabs} />
-          {accountTab === "paperPortfolio" && <PaperPortfolioPage />}
+          {accountTab === "paperPortfolio" && <PaperPortfolioPage onOpenRecords={() => setAccountTab("portfolioRecord")} />}
           {accountTab === "portfolioRecord" && <PortfolioRecordPage />}
         </>}
         {page === "etfVirtualAccount" && <>
           <WorkspaceTabs label="ETF虚拟账户视图" active={accountTab} onChange={setAccountTab} tabs={accountTabs} />
-          {accountTab === "paperPortfolio" && <PaperPortfolioPage accountId="etf" />}
+          {accountTab === "paperPortfolio" && <PaperPortfolioPage accountId="etf" onOpenRecords={() => setAccountTab("portfolioRecord")} />}
           {accountTab === "portfolioRecord" && <PortfolioRecordPage accountId="etf" />}
         </>}
         {page === "alerts" && <AlertsPage />}
